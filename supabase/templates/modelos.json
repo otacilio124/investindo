@@ -1,0 +1,32 @@
+[
+  {
+    "arquivo": "confirmacao.html",
+    "chave": "confirmation",
+    "assunto": "Confirme seu e-mail para começar no Investindo!"
+  },
+  {
+    "arquivo": "redefinir-senha.html",
+    "chave": "recovery",
+    "assunto": "Redefina sua senha do Investindo!"
+  },
+  {
+    "arquivo": "trocar-email.html",
+    "chave": "email_change",
+    "assunto": "Confirme a troca de e-mail no Investindo!"
+  },
+  {
+    "arquivo": "reautenticacao.html",
+    "chave": "reauthentication",
+    "assunto": "Seu código de verificação do Investindo!"
+  },
+  {
+    "arquivo": "aviso-senha-alterada.html",
+    "chave": "password_changed_notification",
+    "assunto": "Sua senha do Investindo! foi alterada"
+  },
+  {
+    "arquivo": "aviso-email-alterado.html",
+    "chave": "email_changed_notification",
+    "assunto": "O e-mail da sua conta Investindo! foi alterado"
+  }
+]

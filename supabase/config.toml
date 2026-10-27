@@ -245,7 +245,7 @@ otp_expiry = 3600
 # sender_name = "Investindo!"
 
 [auth.email.template.confirmation]
-subject = "Confirme seu e-mail no Investindo!"
+subject = "Confirme seu e-mail para começar no Investindo!"
 content_path = "./supabase/templates/confirmacao.html"
 
 [auth.email.template.recovery]
@@ -257,7 +257,7 @@ subject = "Confirme a troca de e-mail no Investindo!"
 content_path = "./supabase/templates/trocar-email.html"
 
 [auth.email.template.reauthentication]
-subject = "Seu código de confirmação do Investindo!"
+subject = "Seu código de verificação do Investindo!"
 content_path = "./supabase/templates/reautenticacao.html"
 
 [auth.email.notification.password_changed]

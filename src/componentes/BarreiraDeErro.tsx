@@ -13,6 +13,16 @@ export class BarreiraDeErro extends Component<{ children: ReactNode; chave?: str
 
   componentDidCatch(erro: Error, info: ErrorInfo) {
     console.error('Tela com erro', erro, info.componentStack);
+    // Pedaço de uma versão que já saiu do ar (Chrome / Safari / Firefox): recarrega uma vez.
+    if (/dynamically imported module|Importing a module script failed|error loading dynamically/i.test(erro.message)) {
+      try {
+        if (sessionStorage.getItem('investindo:recarregou-versao')) return;
+        sessionStorage.setItem('investindo:recarregou-versao', String(Date.now()));
+      } catch {
+        /* segue e recarrega */
+      }
+      window.location.reload();
+    }
   }
 
   componentDidUpdate(anterior: { chave?: string }) {
