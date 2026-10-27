@@ -36,6 +36,14 @@ window.addEventListener('load', () => {
   }, 10_000);
 });
 
+// Avisa o resgate do index.html que o app carregou (não precisa limpar nada).
+(window as Window & { __investindoMontou?: boolean }).__investindoMontou = true;
+try {
+  sessionStorage.removeItem('investindo:resgate');
+} catch {
+  /* sem armazenamento */
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/* "user": quem ativou "reduzir movimento" no aparelho vê as telas sem animação. */}

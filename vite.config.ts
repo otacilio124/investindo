@@ -24,8 +24,22 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: '/index.html',
+        // A página (index.html) vem da internet primeiro; o cache só entra offline.
+        // Servir um index.html antigo do cache fazia o app instalado pedir
+        // arquivos de uma versão que já não existe (tela preta).
+        navigateFallback: null,
+        globIgnores: ['**/index.html'],
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'paginas',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 5 },
+            },
+          },
           {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
             handler: 'CacheFirst',
