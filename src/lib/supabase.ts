@@ -3,7 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const chave = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-export const configurado = Boolean(url && chave);
+/** Build de produção apontando para o Supabase local só funcionaria no computador de quem desenvolve. */
+export const apontaParaLocal = import.meta.env.PROD && /127\.0\.0\.1|localhost/.test(url ?? '');
+
+export const configurado = Boolean(url && chave) && !apontaParaLocal;
 
 export const supabase = createClient(url ?? 'http://127.0.0.1:54521', chave ?? 'sem-chave', {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
@@ -25,5 +28,9 @@ export function mensagemDeErro(e: unknown): string {
   if (/same.*password|different from the old/i.test(msg) || codigo === 'same_password') return 'A nova senha precisa ser diferente da atual.';
   if (/reauthentication|nonce/i.test(msg) || codigo === 'reauthentication_needed') return 'Por segurança, digite o código que enviamos para o seu e-mail.';
   if (/failed to fetch|network/i.test(msg)) return 'Sem conexão. Confira a internet e tente de novo.';
+  if (/error sending|sending .*email|smtp/i.test(msg) || codigo === 'unexpected_failure') {
+    console.error('Falha no envio de e-mail do Supabase Auth:', msg);
+    return 'Não conseguimos enviar o e-mail agora. Tente de novo em alguns minutos.';
+  }
   return 'Algo deu errado. Tente de novo em instantes.';
 }

@@ -4,7 +4,7 @@ import { Carregando, Logotipo } from './componentes/base';
 import { LayoutApp } from './componentes/Estrutura';
 import { carregarPerfil } from './lib/dados';
 import { ProvedorSessao, useSessao } from './lib/sessao';
-import { configurado } from './lib/supabase';
+import { apontaParaLocal, configurado } from './lib/supabase';
 import { ConfirmarLink, CriarConta, Entrar, EsqueciSenha, NovaSenha, Termos, VerifiqueEmail } from './paginas/Autenticacao';
 import Configuracoes from './paginas/Configuracoes';
 import Inicio from './paginas/Inicio';
@@ -55,7 +55,15 @@ function NaoConfigurado() {
     <div className="caixa-auth">
       <Logotipo largura={180} />
       <h1 className="titulo">Falta configurar</h1>
-      <p>Copie <code>.env.example</code> para <code>.env.local</code> e preencha a URL e a chave anon do Supabase. Os passos estão no README.</p>
+      {apontaParaLocal ? (
+        <p>
+          Este site foi publicado apontando para o Supabase local (<code>127.0.0.1</code>), que só existe no computador de quem
+          desenvolve. Na hospedagem, configure <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_ANON_KEY</code> com os dados do
+          projeto de produção e publique de novo.
+        </p>
+      ) : (
+        <p>Copie <code>.env.example</code> para <code>.env.local</code> e preencha a URL e a chave anon do Supabase. Os passos estão no README.</p>
+      )}
     </div>,
   );
 }
