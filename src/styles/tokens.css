@@ -1,0 +1,58 @@
+/* Investindo! — tokens do manual de marca (design system "Investindo!", tokens.json v2).
+   Tema claro e escuro seguem a preferência do aparelho. */
+
+:root {
+  color-scheme: light dark;
+
+  --superficie: #F4F5F1;
+  --superficie-elevada: #FFFFFF;
+  --linha: #B9C4BC;
+  --tinta: #0B1510;
+  --tinta-suave: #45544C;
+  --floresta: #0A2E22;
+  --sobre-floresta: #FFFFFF;
+  --verde: #0E7A4B;
+  --verde-suave: #E2F2E8;
+  --sobre-verde: #FFFFFF;
+  --ouro: #A8761A;
+  --ouro-suave: #F5E9CC;
+  --sobre-ouro: #0B1510;
+  --negativo: #B23A27;
+  --negativo-suave: #FBE6E1;
+  --positivo: var(--verde);
+  --foco: var(--verde);
+
+  --fonte-display: "Archivo", "Arial Black", ui-sans-serif, system-ui, sans-serif;
+  --fonte-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fonte-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --superficie: #0B1410;
+    --superficie-elevada: #132019;
+    --linha: #2C3D34;
+    --tinta: #EEF3EF;
+    --tinta-suave: #A9B8AF;
+    --floresta: #1C5641;
+    --sobre-floresta: #EEF3EF;
+    --verde: #3DCB85;
+    --verde-suave: #123726;
+    --sobre-verde: #0B1410;
+    --ouro: #E8B84A;
+    --ouro-suave: #3A2D10;
+    --sobre-ouro: #0B1410;
+    --negativo: #F2836F;
+    --negativo-suave: #3D1A14;
+  }
+}

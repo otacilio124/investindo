@@ -1,0 +1,190 @@
+/* =====================================================================
+   Camada "terminal": grade técnica, movimento e gráficos.
+   Cores e fontes continuam as do manual; o movimento é curto e calmo.
+   ===================================================================== */
+
+/* Cabeçalho: grade fina de 24 px sobre o floresta, como papel milimetrado de balanço. */
+.cabecalho {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--floresta);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
+  padding-bottom: var(--space-6);
+}
+.cabecalho::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.valor, .valor-medio, .valor-pequeno { white-space: nowrap; }
+.valor-heroi { font-size: clamp(2rem, 7vw, 2.75rem); line-height: 1.1; letter-spacing: -0.02em; }
+
+.pagina-larga { max-width: 980px; }
+@media (min-width: 900px) {
+  .pagina, .cabecalho-conteudo { max-width: 980px; }
+}
+
+/* Cartões: borda acende no hover, sem sombra (manual: separação por borda). */
+.cartao { transition: border-color 0.2s, background-color 0.2s; }
+a.cartao:hover, button.cartao:hover, .cartao-interativo:hover { border-color: var(--tinta-suave); }
+
+/* Status do pregão e ponto vivo */
+.status-pregao {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font: 500 0.75rem/1 var(--fonte-mono); text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 6px 10px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: var(--radius-sm);
+  width: fit-content;
+}
+.ponto-vivo { width: 8px; height: 8px; border-radius: 50%; background: var(--tinta-suave); position: relative; flex: none; }
+.ponto-vivo.ativo { background: #3DCB85; }
+.ponto-vivo.ativo::after {
+  content: "";
+  position: absolute; inset: -4px; border-radius: 50%;
+  border: 1px solid #3DCB85; animation: pulso 2.4s ease-out infinite;
+}
+@keyframes pulso { from { transform: scale(0.6); opacity: 0.9; } to { transform: scale(1.8); opacity: 0; } }
+
+/* Faixa de cotações */
+.faixa-cotacoes {
+  overflow: hidden; border-bottom: 1px solid var(--linha);
+  background: var(--superficie-elevada);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.faixa-trilho { display: flex; width: max-content; animation: faixa 42s linear infinite; }
+.faixa-cotacoes:hover .faixa-trilho { animation-play-state: paused; }
+@keyframes faixa { to { transform: translateX(-50%); } }
+.faixa-item {
+  display: inline-flex; align-items: baseline; gap: var(--space-2);
+  padding: 10px var(--space-6); border-right: 1px solid var(--linha); white-space: nowrap;
+}
+.faixa-item b { font: 800 0.75rem/1 var(--fonte-display); font-stretch: 112.5%; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Carregamento com brilho que passa (nunca piscando) */
+.esqueleto {
+  background: var(--superficie-elevada);
+  border: 1px solid var(--linha); border-radius: var(--radius-md);
+  position: relative; overflow: hidden;
+}
+.esqueleto::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tinta) 6%, transparent), transparent);
+  transform: translateX(-100%); animation: brilho 1.4s ease-in-out infinite;
+}
+@keyframes brilho { to { transform: translateX(100%); } }
+
+/* Grade de ativos */
+.grade-ativos { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: var(--space-4); }
+.cartao-ativo {
+  width: 100%; text-align: left; display: grid; gap: var(--space-2); cursor: pointer;
+  color: var(--tinta); font: inherit;
+}
+.cartao-ativo[data-selecionado="true"] { border-color: var(--verde); box-shadow: inset 0 0 0 1px var(--verde); }
+.codigo-ativo { font: 500 0.6875rem/1 var(--fonte-mono); color: var(--tinta-suave); border: 1px solid var(--linha); padding: 3px 5px; border-radius: var(--radius-sm); }
+.sparkline { overflow: visible; flex: none; }
+.cartao-ativo { min-width: 0; overflow: hidden; }
+.cartao-ativo .sparkline { width: 52%; flex: 0 1 auto; }
+.cartao-ativo .linha-entre { gap: var(--space-2); }
+
+/* Gráfico principal */
+.cartao-grafico { padding: var(--space-4); }
+.grafico-tv { width: 100%; position: relative; }
+.grafico-topo { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-4); align-items: flex-start; }
+.grafico-controles { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.ohlc { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-4); }
+.ohlc-detalhe { display: flex; flex-wrap: wrap; gap: var(--space-4); font: 400 0.75rem/1 var(--fonte-mono); color: var(--tinta-suave); }
+.ohlc-detalhe b { color: var(--tinta); font-weight: 500; }
+.estatisticas { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-2); border-top: 1px solid var(--linha); padding-top: var(--space-4); }
+.estatisticas > div { display: grid; gap: 4px; }
+.estatisticas b { font: 600 0.9375rem/1.2 var(--fonte-mono); font-variant-numeric: tabular-nums; }
+.traco-legenda { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin: 0 4px 0 8px; }
+
+/* Seletor segmentado com fundo que desliza */
+.seletor { display: inline-flex; border: 1px solid var(--linha); border-radius: var(--radius-md); padding: 2px; background: var(--superficie); }
+.seletor button {
+  position: relative; min-height: 32px; min-width: 36px; padding: 0 10px;
+  border: 0; background: none; color: var(--tinta-suave); cursor: pointer;
+  font: 600 0.75rem/1 var(--fonte-mono); display: grid; place-items: center;
+}
+.seletor button[aria-checked="true"] { color: var(--sobre-verde); }
+.seletor button > span:last-child { position: relative; z-index: 1; display: inline-flex; }
+.seletor-fundo { position: absolute; inset: 0; background: var(--verde); border-radius: var(--radius-sm); }
+
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip {
+  position: relative; min-height: 32px; padding: 0 12px; cursor: pointer;
+  border: 1px solid var(--linha); border-radius: var(--radius-sm); background: var(--superficie-elevada);
+  color: var(--tinta); font: 500 0.8125rem/1 var(--fonte-sans); overflow: hidden;
+}
+.chip > span:last-child { position: relative; z-index: 1; }
+.chip[aria-selected="true"], .chip[data-ativo="true"] { border-color: var(--verde); color: var(--sobre-verde); }
+.chip[data-ativo="true"] { background: var(--verde); }
+.chip-fundo { position: absolute; inset: 0; background: var(--verde); }
+
+/* Notícias */
+.lista-noticias { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.noticia {
+  display: grid; grid-template-columns: 96px 1fr auto; gap: var(--space-4); align-items: center;
+  padding: var(--space-2); padding-right: var(--space-4);
+  background: var(--superficie-elevada); border: 1px solid var(--linha); border-radius: var(--radius-md);
+  color: var(--tinta); text-decoration: none; transition: border-color 0.2s;
+}
+.noticia:hover { border-color: var(--tinta-suave); }
+.noticia:hover .noticia-seta { transform: translate(2px, -2px); color: var(--verde); }
+.noticia-seta { color: var(--tinta-suave); transition: transform 0.2s, color 0.2s; }
+.noticia-imagem {
+  width: 96px; height: 72px; border-radius: var(--radius-sm); overflow: hidden;
+  background: var(--superficie); display: grid; place-items: center; color: var(--tinta-suave);
+}
+.noticia-imagem img { width: 100%; height: 100%; object-fit: cover; }
+.noticia-texto { display: grid; gap: 4px; min-width: 0; }
+.noticia-meta { font: 500 0.6875rem/1 var(--fonte-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--tinta-suave); }
+.noticia-titulo { font-weight: 600; font-size: 0.9375rem; line-height: 1.3; }
+.noticia-resumo {
+  font-size: 0.8125rem; line-height: 1.35; color: var(--tinta-suave);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.lista-noticias.compacta .noticia { grid-template-columns: 1fr auto; padding: var(--space-4); }
+@media (max-width: 480px) {
+  .noticia { grid-template-columns: 72px 1fr; }
+  .noticia-imagem { width: 72px; height: 72px; }
+  .noticia-seta { display: none; }
+}
+
+/* Barra de alocação segmentada */
+.barra-alocacao { display: flex; height: 10px; gap: 2px; overflow: hidden; border-radius: var(--radius-sm); background: var(--superficie); }
+.barra-alocacao > span { height: 100%; display: block; }
+.legenda-alocacao { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: 0.75rem; color: var(--tinta-suave); }
+.legenda-alocacao span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda-alocacao i { width: 8px; height: 8px; display: inline-block; }
+.legenda-alocacao b { font: 600 0.75rem/1 var(--fonte-mono); color: var(--tinta); }
+.cabecalho .barra-alocacao { background: rgba(255, 255, 255, 0.08); }
+.cabecalho .legenda-alocacao, .cabecalho .legenda-alocacao b { color: var(--sobre-floresta); }
+
+/* Navegação: indicador que desliza entre os itens */
+.navegacao a { position: relative; }
+.nav-indicador { position: absolute; top: 0; left: 22%; right: 22%; height: 2px; background: var(--verde); }
+@media (min-width: 900px) {
+  .navegacao { justify-content: center; gap: var(--space-4); }
+  .navegacao a { flex: 0 0 104px; }
+}
+
+/* Cartão de indicador com minigráfico */
+.indicador-topo { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-2); }
+.grade-indicadores { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4); }
+.dois-colunas { display: grid; gap: var(--space-6); }
+@media (min-width: 900px) {
+  .dois-colunas { grid-template-columns: 1.4fr 1fr; align-items: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faixa-cotacoes { overflow-x: auto; mask-image: none; }
+  .faixa-trilho { animation: none; }
+  .ponto-vivo.ativo::after, .esqueleto::after { animation: none; }
+}
