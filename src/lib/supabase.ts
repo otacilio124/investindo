@@ -27,10 +27,15 @@ export function mensagemDeErro(e: unknown): string {
   }
   if (/same.*password|different from the old/i.test(msg) || codigo === 'same_password') return 'A nova senha precisa ser diferente da atual.';
   if (/reauthentication|nonce/i.test(msg) || codigo === 'reauthentication_needed') return 'Por segurança, digite o código que enviamos para o seu e-mail.';
-  if (/failed to fetch|network/i.test(msg)) return 'Sem conexão. Confira a internet e tente de novo.';
+  // Chrome: "Failed to fetch"; Safari/iPhone: "Load failed"; Firefox: "NetworkError".
+  if (/failed to fetch|load failed|network/i.test(msg)) return 'Sem conexão com o servidor. Confira a internet e tente de novo.';
   if (/error sending|sending .*email|smtp/i.test(msg) || codigo === 'unexpected_failure') {
     console.error('Falha no envio de e-mail do Supabase Auth:', msg);
     return 'Não conseguimos enviar o e-mail agora. Tente de novo em alguns minutos.';
   }
-  return 'Algo deu errado. Tente de novo em instantes.';
+  // Erro desconhecido: mostra um código curto para quem for diagnosticar (nunca dados sensíveis).
+  console.error('Erro do Supabase Auth:', e);
+  const status = (e as { status?: number })?.status;
+  const detalhe = [codigo, status].filter(Boolean).join(' / ');
+  return `Algo deu errado. Tente de novo em instantes.${detalhe ? ` (código: ${detalhe})` : ''}`;
 }
