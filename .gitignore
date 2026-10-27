@@ -8,3 +8,4 @@ supabase/.branches
 supabase/functions/.env
 *.log
 .env.*.local
+supabase/functions/.env.producao

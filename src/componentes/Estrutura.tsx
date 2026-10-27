@@ -1,8 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { CandlestickChart, GraduationCap, House, Plus, Settings, Target, Wallet } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom';
-import { carregarPerfil } from '../lib/dados';
+import { carregarPerfil, useCarregar } from '../lib/dados';
+import { carregarResumoMercado, PAINEL_MERCADO, type AtivoMercado } from '../lib/mercado';
+import { FaixaCotacoes } from './mercado';
 import { useSessao } from '../lib/sessao';
 import { BarreiraDeErro } from './BarreiraDeErro';
 import { BoasVindas } from './BoasVindas';
@@ -133,6 +135,22 @@ function Abas() {
   );
 }
 
+/** Faixa de cotações que corre no rodapé de todas as telas do app. */
+function RodapeCotacoes() {
+  const perfil = useCarregar(null, carregarPerfil);
+  const ativos = useMemo<AtivoMercado[]>(() => {
+    const etfs = [...new Set([perfil.dados?.etf_acoes_br ?? 'BOVA11', perfil.dados?.etf_exterior ?? 'IVVB11'])];
+    return [...PAINEL_MERCADO, ...etfs.map((codigo) => ({ codigo, nome: codigo, tipo: 'etf' as const, unidade: 'R$' as const }))];
+  }, [perfil.dados]);
+  const resumo = useCarregar('mercado:rodape', () => carregarResumoMercado(ativos), [ativos]);
+  if (!resumo.dados || resumo.dados.length === 0) return null;
+  return (
+    <footer className="rodape-cotacoes">
+      <FaixaCotacoes ativos={resumo.dados} />
+    </footer>
+  );
+}
+
 export function LayoutApp() {
   const local = useLocation();
   const saida = useOutlet();
@@ -150,6 +168,7 @@ export function LayoutApp() {
             <BarreiraDeErro chave={local.pathname}>{saida}</BarreiraDeErro>
           </motion.main>
         </AnimatePresence>
+        <RodapeCotacoes />
       </div>
       <Abas />
       <BoasVindas />

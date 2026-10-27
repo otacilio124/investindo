@@ -144,3 +144,17 @@
 
 /* Barra superior do celular: atalhos lado a lado */
 .barra-topo .avatar svg { color: #fff; }
+
+/* Faixa de cotações no rodapé: acima das abas no celular, na base da tela no tablet/notebook */
+.rodape-cotacoes {
+  position: fixed; left: 0; right: 0; z-index: 15;
+  bottom: calc(58px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--linha);
+}
+.rodape-cotacoes .faixa-cotacoes { border-bottom: 0; }
+.rodape-cotacoes .faixa-item { padding: 8px var(--space-4); }
+.conteudo { padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
+@media (min-width: 768px) {
+  .rodape-cotacoes { position: sticky; bottom: 0; left: auto; right: auto; }
+  .conteudo { padding-bottom: var(--space-8); }
+}
