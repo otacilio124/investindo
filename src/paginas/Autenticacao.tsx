@@ -16,14 +16,28 @@ const emailValido = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 
 function TelaAuth({ titulo, children, rodape }: { titulo: string; children: ReactNode; rodape?: ReactNode }) {
   return (
-    <main className="centro-tela">
-      <div className="caixa-auth">
-        <Logotipo largura={180} />
-        <h1 className="titulo">{titulo}</h1>
-        {children}
-        {rodape && <div className="corpo-pequeno suave pilha-curta">{rodape}</div>}
-      </div>
-    </main>
+    <div className="tela-auth">
+      <aside className="auth-marca">
+        <img src="/marca/investindo-logotipo-escuro.svg" alt="Investindo!" width={190} height={25} />
+        <div>
+          <h2>Patrimônio se constrói todo mês.</h2>
+          <ul>
+            <li><span aria-hidden>1</span><span>Você diz quanto vai investir. O app divide entre reserva, renda fixa e ações, seguindo as suas regras.</span></li>
+            <li><span aria-hidden>2</span><span>Você compra no seu banco. O app nunca mexe no seu dinheiro.</span></li>
+            <li><span aria-hidden>3</span><span>A carteira se atualiza com dados do Banco Central, do Tesouro e da B3.</span></li>
+          </ul>
+        </div>
+        <small>Projeto acadêmico. Não é recomendação de investimento.</small>
+      </aside>
+      <main className="auth-form">
+        <div className="caixa-auth">
+          <span className="so-celular-auth"><Logotipo largura={170} /></span>
+          <h1 className="titulo">{titulo}</h1>
+          {children}
+          {rodape && <div className="corpo-pequeno suave pilha-curta">{rodape}</div>}
+        </div>
+      </main>
+    </div>
   );
 }
 

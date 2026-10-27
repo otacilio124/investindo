@@ -1,10 +1,11 @@
-import { CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ExternalLink } from 'lucide-react';
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { AvisoCache, AvisoErro, Campo, Carregando, ErroCarga, Selecao } from '../componentes/base';
-import { Cabecalho } from '../componentes/Estrutura';
+import { AvisoCache, AvisoErro, Campo, ErroCarga, Selecao } from '../componentes/base';
+import { CabecalhoPagina } from '../componentes/Estrutura';
+import { Dica, GLOSSARIO } from '../componentes/ui';
 import { ratear, type ResultadoRateio } from '../domain/rateio';
-import { COR_CLASSE, NOME_CLASSE, centavos, type Classe } from '../domain/tipos';
+import { COR_CLASSE, NOME_CLASSE, type Classe } from '../domain/tipos';
 import {
   ativoDoProduto,
   cancelarAporte,
@@ -13,6 +14,7 @@ import {
   confirmarAporte,
   montarContextoRateio,
   salvarAporteSugerido,
+  ultimoValorAportado,
   useCarregar,
   type AportePendente,
   type CompraConfirmada,
@@ -21,44 +23,62 @@ import {
 import { formatarMoeda, formatarTaxa, hojeSP, lerMoeda } from '../lib/formato';
 import { useSessao } from '../lib/sessao';
 
-function ResultadoDoRateio({ r, escolhaRF }: { r: ResultadoRateio; escolhaRF: ReturnType<typeof montarContextoRateio>['escolhaRF'] }) {
+type Etapa = 'valor' | 'plano' | 'comprar' | 'confirmar';
+const ETAPAS: { id: Etapa; rotulo: string }[] = [
+  { id: 'valor', rotulo: 'Valor' },
+  { id: 'plano', rotulo: 'Plano' },
+  { id: 'comprar', rotulo: 'Comprar no banco' },
+  { id: 'confirmar', rotulo: 'Confirmar' },
+];
+
+function Etapas({ atual }: { atual: Etapa }) {
+  const i = ETAPAS.findIndex((e) => e.id === atual);
   return (
-    <section className="pilha">
-      <h2 className="subtitulo">Seu aporte de {formatarMoeda(r.disponivel)} fica assim</h2>
-      {r.itens.length === 0 && <p>Nada a comprar este mês.</p>}
-      {r.itens.map((i) => (
-        <article key={`${i.classe}-${i.produto}`} className="cartao pilha-curta" style={{ borderLeftWidth: 1 }}>
-          <div className="linha-entre">
-            <span className="sobretitulo" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span aria-hidden style={{ width: 10, height: 10, background: COR_CLASSE[i.classe], display: 'inline-block' }} />
-              {NOME_CLASSE[i.classe]}
-            </span>
-            <span className="valor-medio">{formatarMoeda(i.valor)}</span>
-          </div>
-          <p style={{ margin: 0, fontWeight: 600 }}>{i.produto}</p>
-          {i.quantidade !== null && <p className="valor-pequeno" style={{ margin: 0 }}>{i.quantidade} {i.quantidade === 1 ? 'cota' : 'cotas'}</p>}
-          <p className="corpo-pequeno suave" style={{ margin: 0 }}>{i.motivo}</p>
-        </article>
+    <ol className="etapas" aria-label="Etapas do aporte">
+      {ETAPAS.map((e, k) => (
+        <li key={e.id} data-estado={k < i ? 'feito' : k === i ? 'atual' : 'futuro'} aria-current={k === i ? 'step' : undefined}>
+          {e.rotulo}
+        </li>
       ))}
+    </ol>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function Plano({ r, escolhaRF }: { r: ResultadoRateio; escolhaRF: ReturnType<typeof montarContextoRateio>['escolhaRF'] }) {
+  return (
+    <div className="pilha">
+      {r.itens.length === 0 && <p className="suave" style={{ margin: 0 }}>Nada a comprar com esse valor. Ele fica guardado para o próximo mês.</p>}
+      <ul className="plano">
+        {r.itens.map((i) => (
+          <li key={`${i.classe}-${i.produto}`}>
+            <span className="faixa-cor" style={{ background: COR_CLASSE[i.classe] }} aria-hidden />
+            <div>
+              <b>{i.produto}{i.quantidade !== null && <span className="suave" style={{ fontWeight: 400 }}> · {i.quantidade} {i.quantidade === 1 ? 'cota' : 'cotas'}</span>}</b>
+              <small>{NOME_CLASSE[i.classe]} — {i.motivo}</small>
+            </div>
+            <span className="valor-pequeno">{formatarMoeda(i.valor)}</span>
+          </li>
+        ))}
+      </ul>
       {r.caixaPendenteNovo > 0 && (
-        <div className="aviso aviso-info">{formatarMoeda(r.caixaPendenteNovo)} ficam guardados e somam ao aporte do mês que vem.</div>
+        <p className="nota">{formatarMoeda(r.caixaPendenteNovo)} ficam guardados e entram no aporte do mês que vem.</p>
       )}
-      <details className="cartao">
-        <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontWeight: 600 }}>Como chegamos aqui</summary>
-        <ol className="corpo-pequeno pilha-curta" style={{ paddingLeft: 20 }}>
+      <details>
+        <summary className="link-discreto" style={{ cursor: 'pointer', minHeight: 36 }}>Por que essa divisão?</summary>
+        <ol className="corpo-pequeno pilha-curta" style={{ paddingLeft: 20, margin: '8px 0 0' }}>
           {r.passos.map((p) => <li key={p}>{p}</li>)}
           {escolhaRF && <li>{escolhaRF.motivo}</li>}
         </ol>
         {escolhaRF && escolhaRF.comparacao.length > 1 && (
-          <table className="tabela corpo-pequeno">
+          <table className="tabela corpo-pequeno" style={{ marginTop: 12 }}>
             <thead><tr><th>Renda fixa comparada</th><th className="num">Líquido a.a.</th></tr></thead>
-            <tbody>
-              {escolhaRF.comparacao.map((c) => <tr key={c.produto}><td>{c.produto}</td><td className="num">{formatarTaxa(c.liquidoAnual)}</td></tr>)}
-            </tbody>
+            <tbody>{escolhaRF.comparacao.map((c) => <tr key={c.produto}><td>{c.produto}</td><td className="num">{formatarTaxa(c.liquidoAnual)}</td></tr>)}</tbody>
           </table>
         )}
       </details>
-    </section>
+    </div>
   );
 }
 
@@ -128,7 +148,7 @@ function ConfirmarCompras({ d, pendente, aoTerminar }: { d: DadosCarteira; pende
     setSalvando(true);
     try {
       await confirmarAporte(pendente.id, compras);
-      aoTerminar('Aporte registrado. Carteira e metas atualizadas.');
+      aoTerminar('Pronto! Aporte registrado e carteira atualizada.');
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível salvar.');
       setSalvando(false);
@@ -138,52 +158,80 @@ function ConfirmarCompras({ d, pendente, aoTerminar }: { d: DadosCarteira; pende
   async function descartar() {
     setSalvando(true);
     await cancelarAporte(pendente.id).catch(() => undefined);
-    aoTerminar('Sugestão descartada.');
+    aoTerminar('Plano descartado. Você pode calcular de novo quando quiser.');
   }
 
   return (
-    <form className="pilha" onSubmit={confirmar}>
-      <div className="pilha-curta">
-        <h2 className="subtitulo">Depois de comprar no seu banco</h2>
-        <p className="corpo-pequeno suave">Confira o que você comprou e ajuste o preço pago, se for diferente. Desmarque o que não comprou.</p>
-      </div>
-      <AvisoErro>{erro}</AvisoErro>
-      <Campo rotulo="Data da compra" type="date" value={data} max={hojeSP()} onChange={(e) => setData(e.target.value)} />
-      {linhas.map((l, k) => {
-        const opcoes = d.ativos.filter((a) => a.classe === l.classe || (l.classe === 'renda_fixa' && a.tipo === 'tesouro' && a.classe !== 'reserva'));
-        const ativo = d.ativos.find((a) => a.id === l.ativoId);
-        const pedeTaxa = ativo && ativo.tipo !== 'etf' && ativo.indexador !== 'nenhum';
-        return (
-          <fieldset key={l.itemId} className="cartao pilha" style={{ margin: 0 }} disabled={salvando}>
-            <legend className="visualmente-oculto">{l.produto}</legend>
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 44, fontWeight: 600 }}>
-              <input type="checkbox" checked={l.comprado} onChange={(e) => alterar(k, { comprado: e.target.checked })} style={{ width: 20, height: 20 }} />
-              {NOME_CLASSE[l.classe]} · {l.produto}
-            </label>
-            {l.comprado && (
-              <>
-                <Selecao rotulo="Produto comprado" value={l.ativoId} onChange={(e) => alterar(k, { ativoId: e.target.value })}
-                  ajuda={<>Não está na lista? <Link to="/carteira">Cadastre na Carteira</Link>.</>}>
-                  <option value="">Escolha…</option>
-                  {opcoes.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
-                </Selecao>
-                <div className="grade-cartoes">
-                  <Campo rotulo={ativo?.tipo === 'etf' ? 'Cotas' : ativo?.tipo === 'tesouro' ? 'Quantidade de títulos' : 'Quantidade'} numerico value={l.quantidade} onChange={(e) => alterar(k, { quantidade: e.target.value })} />
-                  <Campo rotulo="Preço por unidade (R$)" numerico value={l.preco} onChange={(e) => alterar(k, { preco: e.target.value })} />
+    <div className="grade">
+      <aside className="painel n-4 t-12">
+        <div className="painel-titulo"><h2>O que comprar</h2></div>
+        <ul className="plano">
+          {pendente.itens.map((i) => (
+            <li key={i.id}>
+              <span className="faixa-cor" style={{ background: COR_CLASSE[i.classe] }} aria-hidden />
+              <div><b>{i.produto}</b><small>{i.quantidade_sugerida ? `${Number(i.quantidade_sugerida)} cotas` : NOME_CLASSE[i.classe]}</small></div>
+              <span className="valor-pequeno">{formatarMoeda(Math.round(Number(i.valor_sugerido) * 100))}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="nota" style={{ display: 'flex', gap: 6 }}>
+          <ExternalLink size={14} aria-hidden style={{ flex: 'none', marginTop: 1 }} />
+          Abra o app do seu banco ou corretora, compre cada item e volte aqui para confirmar.
+        </p>
+      </aside>
+
+      <form className="painel n-8 t-12" onSubmit={confirmar}>
+        <div className="painel-titulo"><h2>Confirme o que você comprou</h2></div>
+        <p className="corpo-pequeno suave" style={{ margin: 0 }}>Ajuste o preço se pagou diferente. Desmarque o que não comprou.</p>
+        <AvisoErro>{erro}</AvisoErro>
+        <div style={{ maxWidth: 220 }}>
+          <Campo rotulo="Data da compra" type="date" value={data} max={hojeSP()} onChange={(e) => setData(e.target.value)} />
+        </div>
+        {linhas.map((l, k) => {
+          const opcoes = d.ativos.filter((a) => a.classe === l.classe || (l.classe === 'renda_fixa' && a.tipo === 'tesouro' && a.classe !== 'reserva'));
+          const ativo = d.ativos.find((a) => a.id === l.ativoId);
+          const pedeTaxa = ativo && ativo.tipo !== 'etf' && ativo.indexador !== 'nenhum';
+          return (
+            <fieldset key={l.itemId} className="pilha" disabled={salvando}
+              style={{ margin: 0, padding: '16px 0 0', border: 0, borderTop: '1px solid var(--linha)' }}>
+              <legend className="visualmente-oculto">{l.produto}</legend>
+              <label style={{ display: 'flex', gap: 10, alignItems: 'center', minHeight: 40, fontWeight: 600 }}>
+                <input type="checkbox" checked={l.comprado} onChange={(e) => alterar(k, { comprado: e.target.checked })} style={{ width: 20, height: 20, accentColor: 'var(--verde)' }} />
+                {l.produto} <span className="suave" style={{ fontWeight: 400 }}>· {NOME_CLASSE[l.classe]}</span>
+              </label>
+              {l.comprado && (
+                <div className="grade" style={{ gap: 12 }}>
+                  <div className={pedeTaxa ? 'n-5 t-12' : 'n-6 t-12'}>
+                    <Selecao rotulo="Produto" value={l.ativoId} onChange={(e) => alterar(k, { ativoId: e.target.value })}
+                      ajuda={<>Não achou? <Link to="/carteira">Cadastre na Carteira</Link>.</>}>
+                      <option value="">Escolha…</option>
+                      {opcoes.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                    </Selecao>
+                  </div>
+                  <div className={pedeTaxa ? 'n-2 t-6' : 'n-3 t-6'}>
+                    <Campo rotulo={ativo?.tipo === 'etf' ? 'Cotas' : 'Quantidade'} numerico value={l.quantidade} onChange={(e) => alterar(k, { quantidade: e.target.value })} />
+                  </div>
+                  <div className="n-3 t-6">
+                    <Campo rotulo="Preço (R$)" numerico value={l.preco} onChange={(e) => alterar(k, { preco: e.target.value })} />
+                  </div>
                   {pedeTaxa && (
-                    <Campo rotulo={ativo.indexador === 'cdi' || ativo.indexador === 'selic' ? '% do índice' : 'Taxa contratada (% a.a.)'} numerico value={l.taxa} onChange={(e) => alterar(k, { taxa: e.target.value })} />
+                    <div className="n-2 t-6">
+                      <Campo rotulo={ativo.indexador === 'cdi' || ativo.indexador === 'selic' ? '% do índice' : 'Taxa % a.a.'} numerico value={l.taxa} onChange={(e) => alterar(k, { taxa: e.target.value })} />
+                    </div>
                   )}
                 </div>
-              </>
-            )}
-          </fieldset>
-        );
-      })}
-      <button className="botao botao-principal botao-largo" disabled={salvando}>
-        <CheckCircle2 size={20} className="icone" aria-hidden /> {salvando ? 'Salvando…' : 'Marquei como comprado'}
-      </button>
-      <button type="button" className="botao-link" onClick={descartar} disabled={salvando}>Descartar esta sugestão</button>
-    </form>
+              )}
+            </fieldset>
+          );
+        })}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', borderTop: '1px solid var(--linha)', paddingTop: 16 }}>
+          <button className="botao botao-principal" disabled={salvando}>
+            <CheckCircle2 size={18} aria-hidden /> {salvando ? 'Salvando…' : 'Confirmar compras'}
+          </button>
+          <button type="button" className="botao-link" onClick={descartar} disabled={salvando}>Descartar e recalcular</button>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -193,38 +241,55 @@ export default function Investir() {
   const { sessao } = useSessao();
   const carteira = useCarregar(sessao ? `carteira:${sessao.user.id}` : null, carregarCarteira);
   const pendenteR = useCarregar(null, carregarAportePendente);
+  const ultimo = useCarregar(null, ultimoValorAportado);
   const [valor, setValor] = useState('');
-  const [resultado, setResultado] = useState<{ aporte: number; r: ResultadoRateio } | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   const ctx = useMemo(() => (carteira.dados ? montarContextoRateio(carteira.dados) : null), [carteira.dados]);
-
-  if ((carteira.carregando && !carteira.dados) || pendenteR.carregando) return <><Cabecalho sobretitulo="Aporte do mês" /><main className="pagina"><Carregando /></main></>;
-  if (!carteira.dados || !ctx) return <><Cabecalho sobretitulo="Aporte do mês" /><main className="pagina"><ErroCarga mensagem={carteira.erro ?? ''} tentarDeNovo={carteira.recarregar} /></main></>;
-  const d = carteira.dados;
-
-  function calcular(e: FormEvent) {
-    e.preventDefault();
-    setErro(null);
-    setMensagem(null);
-    const aporte = lerMoeda(valor);
-    if (aporte === null || aporte <= 0) return setErro('Digite quanto quer investir, por exemplo 700,00.');
-    if (aporte > centavos(10_000_000)) return setErro('Valor alto demais para este app.');
+  const aporte = lerMoeda(valor);
+  // Prévia ao vivo: o plano se refaz a cada número digitado.
+  const previa = useMemo(() => {
+    if (!ctx || aporte === null || aporte <= 0 || aporte > 1_000_000_000) return null;
     try {
-      setResultado({ aporte, r: ratear({ ...ctx!.entrada, aporte }) });
-    } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Não foi possível calcular.');
+      return ratear({ ...ctx.entrada, aporte });
+    } catch {
+      return null;
     }
+  }, [ctx, aporte]);
+
+  const cab = (etapa: Etapa) => (
+    <>
+      <CabecalhoPagina contexto="Aporte do mês" titulo="Investir" />
+      <Etapas atual={etapa} />
+    </>
+  );
+
+  if ((carteira.carregando && !carteira.dados) || pendenteR.carregando) {
+    return <>{cab('valor')}<div className="grade"><div className="esqueleto n-5" style={{ height: 260 }} /><div className="esqueleto n-7" style={{ height: 260 }} /></div></>;
+  }
+  if (!carteira.dados || !ctx) return <>{cab('valor')}<ErroCarga mensagem={carteira.erro ?? ''} tentarDeNovo={carteira.recarregar} /></>;
+  const d = carteira.dados;
+  const pendente = pendenteR.dados;
+
+  if (pendente) {
+    return (
+      <>
+        {cab('confirmar')}
+        <ConfirmarCompras d={d} pendente={pendente}
+          aoTerminar={(msg) => { setMensagem(msg); pendenteR.recarregar(); carteira.recarregar(); }} />
+      </>
+    );
   }
 
-  async function salvar() {
-    if (!resultado) return;
+  async function seguir(e: FormEvent) {
+    e.preventDefault();
+    setErro(null);
+    if (!previa || aporte === null) return setErro('Digite quanto quer investir, por exemplo 700.');
     setSalvando(true);
     try {
-      await salvarAporteSugerido(d, resultado.aporte, resultado.r, ctx!);
-      setResultado(null);
+      await salvarAporteSugerido(d, aporte, previa, ctx!);
       setValor('');
       pendenteR.recarregar();
     } catch (err) {
@@ -234,45 +299,55 @@ export default function Investir() {
     }
   }
 
-  const pendente = pendenteR.dados;
+  const atalhos = [...new Set([ultimo.dados, 50000, 70000, 100000].filter((v): v is number => !!v))];
+  const faltaReserva = Math.max(0, ctx.entrada.reserva.meta - ctx.entrada.reserva.saldo);
 
   return (
     <>
-      <Cabecalho sobretitulo="Aporte do mês" />
-      <main className="pagina">
-        <AvisoCache salvoEm={carteira.doCacheDe} />
-        {mensagem && <div className="aviso aviso-conquista" role="status">{mensagem}</div>}
+      {cab(previa ? 'plano' : 'valor')}
+      {mensagem && <div className="aviso aviso-conquista" role="status">{mensagem}</div>}
+      <AvisoCache salvoEm={carteira.doCacheDe} />
 
-        {pendente ? (
-          <ConfirmarCompras
-            d={d}
-            pendente={pendente}
-            aoTerminar={(msg) => { setMensagem(msg); pendenteR.recarregar(); carteira.recarregar(); }}
-          />
-        ) : (
-          <>
-            <form className="pilha" onSubmit={calcular} noValidate>
-              <Campo rotulo="Quanto você vai investir este mês? (R$)" numerico value={valor} placeholder="700,00"
-                onChange={(e) => { setValor(e.target.value); setResultado(null); }} erro={erro} />
-              <button className="botao botao-principal botao-largo">Calcular rateio</button>
-            </form>
-            {ctx.avisos.length > 0 && (
-              <ul className="legenda pilha-curta" style={{ margin: 0, paddingLeft: 16 }}>
-                {ctx.avisos.map((a) => <li key={a}>{a}</li>)}
-              </ul>
-            )}
-            {resultado && (
-              <>
-                <ResultadoDoRateio r={resultado.r} escolhaRF={ctx.escolhaRF} />
-                <button className="botao botao-principal botao-largo" onClick={salvar} disabled={salvando}>
-                  {salvando ? 'Salvando…' : 'Vou comprar assim'}
+      <div className="grade">
+        <form className="painel n-5" onSubmit={seguir} noValidate>
+          <div className="painel-titulo"><h2>Quanto você vai investir?</h2></div>
+          <label className="visualmente-oculto" htmlFor="valor-aporte">Valor do aporte em reais</label>
+          <div className="campo-valor">
+            <span aria-hidden>R$</span>
+            <input id="valor-aporte" inputMode="decimal" autoComplete="off" placeholder="0,00" value={valor} autoFocus
+              onChange={(e) => { setValor(e.target.value); setErro(null); }} aria-invalid={Boolean(erro)} />
+          </div>
+          <div className="valores-rapidos" aria-label="Valores rápidos">
+            {atalhos.map((v) => {
+              const texto = (v / 100).toLocaleString('pt-BR', { minimumFractionDigits: v % 100 ? 2 : 0 });
+              return (
+                <button key={v} type="button" aria-pressed={aporte === v} onClick={() => setValor(texto)}>
+                  {v === ultimo.dados ? `Último: ${formatarMoeda(v)}` : formatarMoeda(v).replace(',00', '')}
                 </button>
-                <p className="legenda">O Investindo! aplica as regras que você definiu. Não é recomendação de investimento.</p>
-              </>
-            )}
-          </>
-        )}
-      </main>
+              );
+            })}
+          </div>
+          <AvisoErro>{erro}</AvisoErro>
+          <ul className="atencao corpo-pequeno suave">
+            <li><span aria-hidden>·</span><span>{faltaReserva > 0 ? <>Faltam {formatarMoeda(faltaReserva)} na reserva; eles vêm primeiro.</> : 'Sua reserva está completa.'} <Dica sobre="rateio" texto={GLOSSARIO.rateio} /></span></li>
+            {ctx.entrada.caixaPendente > 0 && <li><span aria-hidden>·</span><span>{formatarMoeda(ctx.entrada.caixaPendente)} guardados do mês passado entram junto.</span></li>}
+            {ctx.avisos.map((a) => <li key={a}><span aria-hidden>·</span><span>{a}</span></li>)}
+          </ul>
+          <button className="botao botao-principal botao-largo" disabled={salvando || !previa}>
+            {salvando ? 'Salvando…' : <>Vou comprar assim <ArrowRight size={18} aria-hidden /></>}
+          </button>
+          <p className="nota">O app aplica as regras que você definiu em Ajustes. Não é recomendação de investimento.</p>
+        </form>
+
+        <section className="painel n-7" aria-live="polite">
+          <div className="painel-titulo">
+            <h2>{previa ? `Plano para ${formatarMoeda(previa.disponivel)}` : 'Seu plano aparece aqui'}</h2>
+          </div>
+          {previa
+            ? <Plano r={previa} escolhaRF={ctx.escolhaRF} />
+            : <p className="corpo-pequeno suave" style={{ margin: 0 }}>Digite um valor ao lado. O app mostra na hora quanto vai para cada investimento e por quê.</p>}
+        </section>
+      </div>
     </>
   );
 }

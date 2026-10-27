@@ -107,8 +107,14 @@ export function ratear(e: EntradaRateio): ResultadoRateio {
     passos.push(`Somamos ${brl(e.caixaPendente)} guardados do mês anterior ao aporte.`);
   }
 
-  // 1. Reserva de emergência
-  const faltaReserva = Math.max(0, e.reserva.meta - e.reserva.saldo);
+  // 1. Reserva de emergência. Uma falta menor que a menor compra possível do
+  // produto (ou que R$ 1) não vira item: não dá para comprar R$ 0,43 de Tesouro.
+  const faltaBruta = Math.max(0, e.reserva.meta - e.reserva.saldo);
+  const tolerancia = Math.max(e.reserva.minimo ?? 0, 100);
+  const faltaReserva = faltaBruta < tolerancia ? 0 : faltaBruta;
+  if (faltaBruta > 0 && faltaReserva === 0) {
+    passos.push(`Faltam só ${brl(faltaBruta)} na reserva, menos que a compra mínima de ${e.reserva.produto}. Ela conta como completa.`);
+  }
   const paraReserva = Math.min(disponivel, faltaReserva);
   if (paraReserva > 0) {
     const abaixoDoMinimo = e.reserva.minimo !== undefined && paraReserva < e.reserva.minimo;

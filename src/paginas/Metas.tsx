@@ -2,7 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AvisoCache, AvisoErro, BarraReserva, Campo, Carregando, ErroCarga, useCoresGrafico } from '../componentes/base';
-import { Cabecalho } from '../componentes/Estrutura';
+import { CabecalhoPagina } from '../componentes/Estrutura';
 import { JURO_REAL_PROJECAO, projetarPatrimonio } from '../domain/metas';
 import { apagarMeta, carregarCarteira, resumoDaCarteira, salvarMeta, useCarregar } from '../lib/dados';
 import { formatarData, formatarMoeda, formatarMoedaCurta, formatarPercentual, hojeSP, lerMoeda } from '../lib/formato';
@@ -16,8 +16,8 @@ export default function Metas() {
   const [erro, setErro] = useState<string | null>(null);
   const cor = useCoresGrafico();
 
-  if (r.carregando && !r.dados) return <><Cabecalho sobretitulo="Metas" /><main className="pagina"><Carregando /></main></>;
-  if (!r.dados) return <><Cabecalho sobretitulo="Metas" /><main className="pagina"><ErroCarga mensagem={r.erro ?? ''} tentarDeNovo={r.recarregar} /></main></>;
+  if (r.carregando && !r.dados) return <><CabecalhoPagina titulo="Metas" contexto="Reserva, projeções e objetivos" /><div className="pagina"><Carregando /></div></>;
+  if (!r.dados) return <><CabecalhoPagina titulo="Metas" contexto="Reserva, projeções e objetivos" /><div className="pagina"><ErroCarga mensagem={r.erro ?? ''} tentarDeNovo={r.recarregar} /></div></>;
 
   const d = r.dados;
   const resumo = resumoDaCarteira(d);
@@ -44,8 +44,8 @@ export default function Metas() {
 
   return (
     <>
-      <Cabecalho sobretitulo="Metas" />
-      <main className="pagina">
+      <CabecalhoPagina titulo="Metas" contexto="Reserva, projeções e objetivos" />
+      <div className="pagina">
         <AvisoCache salvoEm={r.doCacheDe} />
 
         <section className="cartao pilha">
@@ -120,7 +120,7 @@ export default function Metas() {
             <button className="botao botao-secundario">Adicionar meta</button>
           </form>
         </section>
-      </main>
+      </div>
     </>
   );
 }

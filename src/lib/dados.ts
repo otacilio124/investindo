@@ -303,6 +303,33 @@ export async function rendimentoDoMes(d: DadosCarteira, valorHoje: number): Prom
   return valorHoje - valorAntes - dinheiroNovo;
 }
 
+export interface AporteDoMes {
+  status: 'nenhum' | 'sugerido' | 'confirmado';
+  valor: number | null;
+  data: string | null;
+}
+
+/** Situação do aporte deste mês, para a tela inicial dizer o que falta fazer. */
+export async function carregarAporteDoMes(): Promise<AporteDoMes> {
+  const competencia = `${hojeSP().slice(0, 8)}01`;
+  const linhas = exigir<{ status: 'sugerido' | 'confirmado'; valor_informado: number; data: string }[]>(
+    await supabase.from('aporte').select('status, valor_informado, data')
+      .eq('competencia', competencia).neq('status', 'cancelado').order('criado_em', { ascending: false }),
+  );
+  const feito = linhas.find((l) => l.status === 'confirmado');
+  const atual = feito ?? linhas[0];
+  if (!atual) return { status: 'nenhum', valor: null, data: null };
+  return { status: atual.status, valor: Number(atual.valor_informado), data: atual.data };
+}
+
+/** Valor do último aporte confirmado, sugerido como atalho na tela Investir. */
+export async function ultimoValorAportado(): Promise<number | null> {
+  const linhas = exigir<{ valor_informado: number }[]>(
+    await supabase.from('aporte').select('valor_informado').eq('status', 'confirmado').order('criado_em', { ascending: false }).limit(1),
+  );
+  return linhas[0] ? Math.round(Number(linhas[0].valor_informado) * 100) : null;
+}
+
 export interface AportePendente {
   id: string;
   data: string;

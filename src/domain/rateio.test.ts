@@ -51,8 +51,15 @@ describe('ratear — reserva', () => {
   });
 
   it('avisa quando o valor da reserva não atinge o mínimo do produto', () => {
-    const r = ratear(base({ reserva: { saldo: 980000, meta: 1000000, produto: 'Tesouro Selic', minimo: 20170 } }));
+    const r = ratear(base({ aporte: 10000, reserva: { saldo: 0, meta: 1000000, produto: 'Tesouro Selic', minimo: 20170 } }));
     expect(r.itens.find((i) => i.classe === 'reserva')!.motivo).toMatch(/CDB de liquidez diária/);
+  });
+
+  it('falta menor que a compra mínima não vira item de reserva', () => {
+    const r = ratear(base({ reserva: { saldo: 599957, meta: 600000, produto: 'Tesouro Selic', minimo: 20170 } }));
+    expect(r.itens.find((i) => i.classe === 'reserva')).toBeUndefined();
+    expect(r.passos[0]).toMatch(/conta como completa/);
+    expect(r.itens.reduce((a, i) => a + i.valor, 0) + r.caixaPendenteNovo).toBe(70000);
   });
 
   it('reserva longe da meta leva o aporte inteiro', () => {

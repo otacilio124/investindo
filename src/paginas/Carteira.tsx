@@ -1,17 +1,17 @@
-import { Plus, Receipt } from 'lucide-react';
+import { Download, Plus, Receipt } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { AvisoCache, AvisoErro, Campo, Carregando, ErroCarga, FonteDado, Selecao, useCoresGrafico, Variacao } from '../componentes/base';
-import { Cabecalho } from '../componentes/Estrutura';
-import { NumeroAnimado } from '../componentes/movimento';
+import { Link } from 'react-router-dom';
+import { AvisoCache, AvisoErro, Campo, ErroCarga, Selecao } from '../componentes/base';
+import { CabecalhoPagina } from '../componentes/Estrutura';
 import { GraficoEvolucao } from '../componentes/graficos';
 import { BarraAlocacao } from '../componentes/minigraficos';
-import { DESCRICAO_METODO, serieDePatrimonio, type PontoPatrimonio, type Posicao } from '../domain/carteira';
+import { Dica, Folha, GLOSSARIO } from '../componentes/ui';
+import { DESCRICAO_METODO, type Posicao } from '../domain/carteira';
 import { COR_CLASSE, NOME_CLASSE, type Classe, type Indexador, type TipoAtivo } from '../domain/tipos';
-import { carregarFechamentos } from '../lib/mercado';
 import {
   carregarCarteira,
   criarAtivoProprio,
+  movimentacoesEmCSV,
   registrarExtrato,
   registrarMovimentacao,
   rendimentoDoMes,
@@ -19,99 +19,62 @@ import {
   useCarregar,
   type DadosCarteira,
 } from '../lib/dados';
-import { formatarMoeda, formatarPercentual, hojeSP, lerMoeda } from '../lib/formato';
+import { useEvolucao } from '../lib/evolucao';
+import { formatarData, formatarMoeda, formatarPercentual, hojeSP, lerMoeda } from '../lib/formato';
 import { useSessao } from '../lib/sessao';
 
 const numeroBR = (s: string) => Number(s.trim().replace(/\./g, '').replace(',', '.'));
 
-function GraficoAlvo({ classes }: { classes: ReturnType<typeof resumoDaCarteira>['classes'] }) {
-  const cor = useCoresGrafico();
-  const dados = classes
-    .filter((c) => c.percentualAlvo !== null)
-    .map((c) => ({ nome: NOME_CLASSE[c.classe], Atual: Number(c.percentualAtual.toFixed(1)), Alvo: c.percentualAlvo }));
+function Resultado({ valor, base }: { valor: number; base: number }) {
+  const pct = base ? (valor / base) * 100 : 0;
+  const cls = valor === 0 ? 'neutra' : valor > 0 ? 'alta' : 'queda';
   return (
-    <div style={{ width: '100%', height: 220 }} role="img" aria-label={dados.map((x) => `${x.nome}: ${x.Atual}% atual, alvo ${x.Alvo}%`).join('; ')}>
-      <ResponsiveContainer>
-        <BarChart data={dados} margin={{ top: 8, right: 0, left: -16, bottom: 0 }} barGap={4}>
-          <CartesianGrid vertical={false} stroke={cor.linha} />
-          <XAxis dataKey="nome" tick={{ fill: cor['tinta-suave'], fontSize: 12 }} axisLine={{ stroke: cor.linha }} tickLine={false} />
-          <YAxis unit="%" tick={{ fill: cor['tinta-suave'], fontSize: 12, fontFamily: 'IBM Plex Mono, monospace' }} axisLine={false} tickLine={false} />
-          <Tooltip formatter={(v: number) => `${v.toLocaleString('pt-BR')}%`} cursor={{ fill: cor.linha, opacity: 0.3 }}
-            contentStyle={{ background: cor['superficie-elevada'], border: `1px solid ${cor.linha}`, borderRadius: 4, color: cor.tinta }} />
-          <Legend wrapperStyle={{ fontSize: 12, color: cor['tinta-suave'] }} />
-          <Bar dataKey="Atual" fill={cor.verde} radius={0} isAnimationActive={false} />
-          <Bar dataKey="Alvo" fill={cor['tinta-suave']} radius={0} isAnimationActive={false} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <span className={cls}>
+      {valor === 0 ? '— ' : valor > 0 ? '▲ ' : '▼ '}{formatarMoeda(Math.abs(valor))}
+      <small style={{ display: 'block', fontSize: '0.75rem' }}>{valor >= 0 ? '+' : '−'}{formatarPercentual(Math.abs(pct))}</small>
+    </span>
   );
 }
 
 /* ------------------------------------------------------------------ */
+/* Atualizar pelo extrato                                              */
+/* ------------------------------------------------------------------ */
 
-function LinhaPosicao({ p, aoAtualizar }: { p: Posicao; aoAtualizar: () => void }) {
-  const [aberto, setAberto] = useState(false);
+function FormExtrato({ p, aoSalvar }: { p: Posicao; aoSalvar: () => void }) {
   const [valor, setValor] = useState('');
   const [data, setData] = useState(hojeSP());
   const [erro, setErro] = useState<string | null>(null);
-  const rendimento = p.valorBruto - p.aplicado;
-  const podeExtrato = p.ativo.tipo !== 'etf';
-
   async function salvar(e: FormEvent) {
     e.preventDefault();
     const v = lerMoeda(valor);
-    if (v === null || v < 0) return setErro('Digite o saldo bruto do extrato.');
+    if (v === null || v < 0) return setErro('Digite o saldo bruto que aparece no extrato.');
     try {
       await registrarExtrato(p.ativo.id, data, v / 100);
-      setAberto(false);
-      aoAtualizar();
+      aoSalvar();
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível salvar.');
     }
   }
-
   return (
-    <article className="cartao pilha-curta">
-      <div className="linha-entre">
-        <strong>{p.ativo.nome}</strong>
-        <span className="valor-pequeno">{formatarMoeda(p.valorBruto)}</span>
-      </div>
-      <div className="linha-entre corpo-pequeno">
-        <span className="suave">Aplicado {formatarMoeda(p.aplicado)}</span>
-        <Variacao valor={rendimento} percentual={p.aplicado ? (rendimento / p.aplicado) * 100 : 0} />
-      </div>
-      {p.ativo.tipo === 'etf' && <span className="legenda">{p.quantidade.toLocaleString('pt-BR')} {p.quantidade === 1 ? 'cota' : 'cotas'}</span>}
-      <p className="legenda" style={{ margin: 0 }}>
-        {DESCRICAO_METODO[p.metodo]} · {p.dataReferencia.split('-').reverse().join('/')}
-        {p.irEstimado > 0 && <> · IR estimado se resgatar hoje: {formatarMoeda(p.irEstimado)}</>}
+    <form className="pilha" onSubmit={salvar}>
+      <p className="corpo-pequeno suave" style={{ margin: 0 }}>
+        Hoje o app estima {formatarMoeda(p.valorBruto)} ({DESCRICAO_METODO[p.metodo].toLowerCase()}). Copie o saldo bruto do app do banco para deixar exato; daqui em diante o app corrige pela taxa.
       </p>
-      {podeExtrato && !aberto && (
-        <button className="botao-link corpo-pequeno" onClick={() => setAberto(true)} style={{ justifySelf: 'start' }}>
-          Atualizar pelo extrato do banco
-        </button>
-      )}
-      {aberto && (
-        <form className="pilha-curta" onSubmit={salvar}>
-          <AvisoErro>{erro}</AvisoErro>
-          <div className="grade-cartoes">
-            <Campo rotulo="Saldo bruto (R$)" numerico value={valor} onChange={(e) => setValor(e.target.value)} />
-            <Campo rotulo="Data do extrato" type="date" value={data} max={hojeSP()} onChange={(e) => setData(e.target.value)} />
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="botao botao-principal">Salvar saldo</button>
-            <button type="button" className="botao botao-secundario" onClick={() => setAberto(false)}>Cancelar</button>
-          </div>
-        </form>
-      )}
-    </article>
+      <AvisoErro>{erro}</AvisoErro>
+      <Campo rotulo="Saldo bruto no extrato (R$)" numerico value={valor} onChange={(e) => setValor(e.target.value)} />
+      <Campo rotulo="Data do extrato" type="date" value={data} max={hojeSP()} onChange={(e) => setData(e.target.value)} />
+      <button className="botao botao-principal botao-largo">Salvar saldo</button>
+    </form>
   );
 }
 
 /* ------------------------------------------------------------------ */
+/* Registrar compra ou venda                                           */
+/* ------------------------------------------------------------------ */
 
 const NOVO = '__novo__';
 
-function RegistrarMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: () => void }) {
+function FormMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: () => void }) {
   const [ativoId, setAtivoId] = useState('');
   const [tipo, setTipo] = useState<'compra' | 'venda'>('compra');
   const [data, setData] = useState(hojeSP());
@@ -131,8 +94,8 @@ function RegistrarMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: ()
     setErro(null);
     const q = unitario ? 1 : numeroBR(quantidade);
     const p = numeroBR(preco);
-    if (!ativoId) return setErro('Escolha o ativo.');
-    if (ativoId === NOVO && !novo.nome.trim()) return setErro('Dê um nome ao investimento, por exemplo "CDB Banco X 2028".');
+    if (!ativoId) return setErro('Escolha o investimento.');
+    if (ativoId === NOVO && !novo.nome.trim()) return setErro('Dê um nome, por exemplo "CDB Banco X 2028".');
     if (!(q > 0) || !(p > 0)) return setErro('Confira quantidade e valor.');
     setSalvando(true);
     try {
@@ -154,14 +117,17 @@ function RegistrarMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: ()
   const catalogo = d.ativos.filter((a) => a.tipo !== 'tesouro' || a.vencimento! > d.hoje);
 
   return (
-    <form className="cartao pilha" onSubmit={salvar}>
-      <h2 className="subtitulo">Registrar compra ou venda</h2>
+    <form className="pilha" onSubmit={salvar}>
       <AvisoErro>{erro}</AvisoErro>
-      <Selecao rotulo="Tipo" value={tipo} onChange={(e) => setTipo(e.target.value as 'compra' | 'venda')}>
-        <option value="compra">Compra</option>
-        <option value="venda">Venda ou resgate</option>
-      </Selecao>
-      <Selecao rotulo="Ativo" value={ativoId} onChange={(e) => setAtivoId(e.target.value)}>
+      <div className="seletor" role="radiogroup" aria-label="Tipo" style={{ width: 'fit-content' }}>
+        {(['compra', 'venda'] as const).map((t) => (
+          <button key={t} type="button" role="radio" aria-checked={tipo === t} onClick={() => setTipo(t)}>
+            {tipo === t && <span className="seletor-fundo" />}
+            <span>{t === 'compra' ? 'Compra' : 'Venda ou resgate'}</span>
+          </button>
+        ))}
+      </div>
+      <Selecao rotulo="Investimento" value={ativoId} onChange={(e) => setAtivoId(e.target.value)}>
         <option value="">Escolha…</option>
         {tipo === 'compra' && <option value={NOVO}>+ Cadastrar CDB, LCI/LCA ou outro</option>}
         {(['reserva', 'renda_fixa', 'acoes_br', 'exterior'] as Classe[]).map((c) => (
@@ -174,43 +140,36 @@ function RegistrarMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: ()
       {ativoId === NOVO && (
         <div className="pilha" style={{ borderTop: '1px solid var(--linha)', paddingTop: 16 }}>
           <Campo rotulo="Nome" value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} placeholder="CDB Banco X 2028" maxLength={120} />
-          <div className="grade-cartoes">
-            <Selecao rotulo="Classe" value={novo.classe} onChange={(e) => setNovo({ ...novo, classe: e.target.value as Classe })}>
-              <option value="reserva">Reserva de emergência</option>
-              <option value="renda_fixa">Renda fixa longa</option>
-            </Selecao>
-            <Selecao rotulo="Tipo" value={novo.tipo} onChange={(e) => { const t = e.target.value as TipoAtivo; setNovo({ ...novo, tipo: t, isento: t === 'lci_lca' }); }}>
-              <option value="cdb">CDB</option>
-              <option value="lci_lca">LCI / LCA (isenta de IR)</option>
-              <option value="outro">Outro</option>
-            </Selecao>
-            <Selecao rotulo="Rende" value={novo.indexador} onChange={(e) => setNovo({ ...novo, indexador: e.target.value as Indexador })}>
-              <option value="cdi">% do CDI</option>
-              <option value="pre">Prefixado</option>
-              <option value="ipca">IPCA + taxa</option>
-              <option value="nenhum">Não sei (atualizo pelo extrato)</option>
-            </Selecao>
-            <Campo rotulo="Vencimento" type="date" value={novo.vencimento} onChange={(e) => setNovo({ ...novo, vencimento: e.target.value })} />
-          </div>
-          <label className="corpo-pequeno" style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 44 }}>
-            <input type="checkbox" checked={novo.liquidez} onChange={(e) => setNovo({ ...novo, liquidez: e.target.checked })} style={{ width: 20, height: 20 }} />
-            Posso resgatar a qualquer dia (liquidez diária)
+          <Selecao rotulo="Para que serve" value={novo.classe} onChange={(e) => setNovo({ ...novo, classe: e.target.value as Classe })}>
+            <option value="reserva">Reserva de emergência</option>
+            <option value="renda_fixa">Renda fixa longa</option>
+          </Selecao>
+          <Selecao rotulo="Tipo" value={novo.tipo} onChange={(e) => { const t = e.target.value as TipoAtivo; setNovo({ ...novo, tipo: t, isento: t === 'lci_lca' }); }}>
+            <option value="cdb">CDB</option>
+            <option value="lci_lca">LCI / LCA (sem IR)</option>
+            <option value="outro">Outro</option>
+          </Selecao>
+          <Selecao rotulo="Como rende" value={novo.indexador} onChange={(e) => setNovo({ ...novo, indexador: e.target.value as Indexador })}>
+            <option value="cdi">% do CDI</option>
+            <option value="pre">Prefixado</option>
+            <option value="ipca">IPCA + taxa</option>
+            <option value="nenhum">Não sei (atualizo pelo extrato)</option>
+          </Selecao>
+          <Campo rotulo="Vencimento" type="date" value={novo.vencimento} onChange={(e) => setNovo({ ...novo, vencimento: e.target.value })} />
+          <label className="corpo-pequeno" style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 40 }}>
+            <input type="checkbox" checked={novo.liquidez} onChange={(e) => setNovo({ ...novo, liquidez: e.target.checked })} style={{ width: 18, height: 18, accentColor: 'var(--verde)' }} />
+            Posso resgatar a qualquer dia
           </label>
         </div>
       )}
 
-      <div className="grade-cartoes">
-        <Campo rotulo="Data" type="date" value={data} max={hojeSP()} onChange={(e) => setData(e.target.value)} />
-        {!unitario && <Campo rotulo={ativo?.tipo === 'etf' ? 'Cotas' : 'Quantidade'} numerico value={quantidade} onChange={(e) => setQuantidade(e.target.value)} />}
-        <Campo rotulo={unitario ? 'Valor aplicado (R$)' : 'Preço por unidade (R$)'} numerico value={preco} onChange={(e) => setPreco(e.target.value)} />
-        {pedeTaxa && (
-          <Campo
-            rotulo={indexador === 'cdi' || indexador === 'selic' ? '% do índice' : 'Taxa (% a.a.)'}
-            numerico value={taxa} onChange={(e) => setTaxa(e.target.value)}
-            ajuda={indexador === 'cdi' ? 'Ex.: 102 para 102% do CDI.' : indexador === 'ipca' ? 'Só a parte real, ex.: 6,5 para IPCA + 6,5%.' : undefined}
-          />
-        )}
-      </div>
+      <Campo rotulo="Data" type="date" value={data} max={hojeSP()} onChange={(e) => setData(e.target.value)} />
+      {!unitario && <Campo rotulo={ativo?.tipo === 'etf' ? 'Cotas' : 'Quantidade'} numerico value={quantidade} onChange={(e) => setQuantidade(e.target.value)} />}
+      <Campo rotulo={unitario ? 'Valor (R$)' : 'Preço por unidade (R$)'} numerico value={preco} onChange={(e) => setPreco(e.target.value)} />
+      {pedeTaxa && (
+        <Campo rotulo={indexador === 'cdi' || indexador === 'selic' ? '% do índice' : 'Taxa (% a.a.)'} numerico value={taxa} onChange={(e) => setTaxa(e.target.value)}
+          ajuda={indexador === 'cdi' ? 'Ex.: 102 para 102% do CDI.' : indexador === 'ipca' ? 'Só a parte real, ex.: 6,5 para IPCA + 6,5%.' : undefined} />
+      )}
       <button className="botao botao-principal botao-largo" disabled={salvando}>{salvando ? 'Salvando…' : 'Registrar'}</button>
     </form>
   );
@@ -222,117 +181,141 @@ export default function Carteira() {
   const { sessao } = useSessao();
   const r = useCarregar(sessao ? `carteira:${sessao.user.id}` : null, carregarCarteira);
   const [registrando, setRegistrando] = useState(false);
+  const [extrato, setExtrato] = useState<Posicao | null>(null);
   const [doMes, setDoMes] = useState<number | null>(null);
-
+  const evolucao = useEvolucao(r.dados);
   const resumo = r.dados ? resumoDaCarteira(r.dados) : null;
-  const [evolucao, setEvolucao] = useState<PontoPatrimonio[] | null>(null);
+
   useEffect(() => {
     if (r.dados && resumo && !r.doCacheDe) rendimentoDoMes(r.dados, resumo.total).then(setDoMes).catch(() => setDoMes(null));
-    if (r.dados) {
-      const d = r.dados;
-      const ids = new Set(d.movimentacoes.map((m) => m.ativoId));
-      const codigos = d.ativos.filter((a) => ids.has(a.id)).map((a) => a.codigo);
-      const desde = d.movimentacoes[0]?.data ?? d.hoje;
-      carregarFechamentos(codigos, desde)
-        .then((f) => setEvolucao(serieDePatrimonio(d.ativos, d.movimentacoes, d.extratos, f, d.mercado, d.hoje)))
-        .catch(() => setEvolucao(null));
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [r.dados]);
 
-  if (r.carregando && !r.dados) return <><Cabecalho sobretitulo="Carteira" /><main className="pagina"><Carregando /></main></>;
-  if (!r.dados || !resumo) return <><Cabecalho sobretitulo="Carteira" /><main className="pagina"><ErroCarga mensagem={r.erro ?? ''} tentarDeNovo={r.recarregar} /></main></>;
+  const acoes = (
+    <>
+      {r.dados && (
+        <button className="botao botao-secundario" onClick={() => {
+          const url = URL.createObjectURL(new Blob([movimentacoesEmCSV(r.dados!)], { type: 'text/csv;charset=utf-8' }));
+          const a = Object.assign(document.createElement('a'), { href: url, download: `investindo-movimentacoes-${hojeSP()}.csv` });
+          a.click();
+          URL.revokeObjectURL(url);
+        }}>
+          <Download size={18} aria-hidden /> <span className="so-notebook">Exportar</span>
+        </button>
+      )}
+      <button className="botao botao-principal" onClick={() => setRegistrando(true)}><Plus size={18} aria-hidden /> Registrar</button>
+    </>
+  );
+
+  if (r.carregando && !r.dados) {
+    return <><CabecalhoPagina titulo="Carteira" /><div className="esqueleto" style={{ height: 96 }} /><div className="grade"><div className="esqueleto n-8" style={{ height: 300 }} /><div className="esqueleto n-4" style={{ height: 300 }} /></div></>;
+  }
+  if (!r.dados || !resumo) return <><CabecalhoPagina titulo="Carteira" /><ErroCarga mensagem={r.erro ?? ''} tentarDeNovo={r.recarregar} /></>;
+
   const d = r.dados;
   const rendimento = resumo.total - resumo.totalAplicado;
+  const recarregar = () => { setRegistrando(false); setExtrato(null); r.recarregar(); };
+  const posicoes = [...resumo.posicoes].sort((a, b) => b.valorBruto - a.valorBruto);
 
   return (
     <>
-      <Cabecalho sobretitulo="Carteira" valor={<NumeroAnimado valor={resumo.total} formatar={(v) => formatarMoeda(Math.round(v))} />}>
-        {resumo.totalAplicado > 0 && <Variacao valor={rendimento} percentual={(rendimento / resumo.totalAplicado) * 100} />}
-      </Cabecalho>
-      <main className="pagina">
-        <AvisoCache salvoEm={r.doCacheDe} />
+      <CabecalhoPagina contexto={`${posicoes.length} investimentos`} titulo="Carteira" acoes={acoes} />
+      <AvisoCache salvoEm={r.doCacheDe} />
 
-        {resumo.posicoes.length === 0 && !registrando && (
-          <div className="cartao pilha">
-            <h2 className="subtitulo">Sua carteira está vazia</h2>
-            <p className="suave">Faça o primeiro aporte em Investir, ou registre o que você já tem.</p>
+      {posicoes.length === 0 ? (
+        <section className="painel" style={{ textAlign: 'center', padding: 48 }}>
+          <h2 className="subtitulo">Sua carteira está vazia</h2>
+          <p className="suave" style={{ margin: 0 }}>Faça o primeiro aporte ou registre o que você já tem.</p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link to="/investir" className="botao botao-principal">Fazer o primeiro aporte</Link>
+            <button className="botao botao-secundario" onClick={() => setRegistrando(true)}>Registrar o que já tenho</button>
           </div>
-        )}
+        </section>
+      ) : (
+        <>
+          <div className="faixa-resumo">
+            <div><span>Patrimônio</span><b>{formatarMoeda(resumo.total)}</b></div>
+            <div><span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>Aplicado <Dica sobre="aplicado" texto={GLOSSARIO.aplicado} /></span><b>{formatarMoeda(resumo.totalAplicado)}</b></div>
+            <div><span>Resultado total</span><b className={rendimento >= 0 ? 'alta' : 'queda'}>{rendimento >= 0 ? '+' : '−'}{formatarMoeda(Math.abs(rendimento))}</b></div>
+            <div><span>Neste mês</span><b className={doMes === null ? 'neutra' : doMes >= 0 ? 'alta' : 'queda'}>{doMes === null ? '—' : `${doMes >= 0 ? '+' : '−'}${formatarMoeda(Math.abs(doMes))}`}</b></div>
+          </div>
 
-        {resumo.posicoes.length > 0 && (
-          <>
-            <section className="grade-cartoes">
-              <article className="cartao pilha-curta">
-                <h3 className="sobretitulo suave">Rendimento no mês</h3>
-                {doMes === null ? <p className="valor-medio">—</p> : <Variacao valor={doMes} percentual={resumo.total ? (doMes / (resumo.total - doMes)) * 100 : 0} />}
-              </article>
-              <article className="cartao pilha-curta">
-                <h3 className="sobretitulo suave">Desde o início</h3>
-                <Variacao valor={rendimento} percentual={resumo.totalAplicado ? (rendimento / resumo.totalAplicado) * 100 : 0} />
-              </article>
-            </section>
-
-            <section className="cartao pilha">
-              <div className="linha-entre">
-                <h2 className="subtitulo">Evolução do patrimônio</h2>
-                <span className="legenda"><i className="traco-legenda" style={{ background: 'var(--verde)' }} />Valor <i className="traco-legenda" style={{ background: 'var(--tinta-suave)' }} />Aplicado</span>
+          <div className="grade">
+            <section className="painel n-8">
+              <div className="painel-titulo">
+                <h2>Evolução</h2>
+                <span className="nota"><i className="traco-legenda" style={{ background: 'var(--verde)', marginLeft: 0 }} />Patrimônio <i className="traco-legenda" style={{ background: 'var(--tinta-suave)' }} />Aplicado</span>
               </div>
-              {evolucao === null && <div className="esqueleto" style={{ height: 240 }} />}
-              {evolucao && evolucao.length >= 2 && <GraficoEvolucao pontos={evolucao} />}
-              {evolucao && evolucao.length < 2 && (
-                <p className="corpo-pequeno suave">O gráfico aparece a partir do segundo pregão com investimentos. Volte amanhã.</p>
-              )}
-              <p className="legenda">Fechamento de cada pregão. ETFs pela cotação do dia; Tesouro pelo preço de resgate; CDB pela curva da taxa contratada.</p>
+              {evolucao === null && <div className="esqueleto" style={{ height: 260 }} />}
+              {evolucao && evolucao.length >= 2 && <GraficoEvolucao pontos={evolucao} altura={260} />}
+              {evolucao && evolucao.length < 2 && <p className="corpo-pequeno suave">O gráfico aparece a partir do segundo dia com investimentos.</p>}
             </section>
 
-            <section className="cartao pilha">
-              <h2 className="subtitulo">Alocação</h2>
+            <section className="painel n-4">
+              <div className="painel-titulo"><h2>Alocação</h2></div>
               <BarraAlocacao partes={resumo.classes.map((c) => ({ rotulo: NOME_CLASSE[c.classe], valor: c.valorBruto, cor: COR_CLASSE[c.classe] }))} />
+              <ul className="linhas" style={{ marginTop: 8 }}>
+                {resumo.classes.filter((c) => c.percentualAlvo !== null).map((c) => {
+                  const diff = c.percentualAtual - (c.percentualAlvo ?? 0);
+                  return (
+                    <li key={c.classe} style={{ gridTemplateColumns: '1fr auto' }}>
+                      <span><span className="marca-classe" style={{ background: COR_CLASSE[c.classe] }} />{NOME_CLASSE[c.classe]}</span>
+                      <span className="valor-pequeno" style={{ textAlign: 'right' }}>
+                        {formatarPercentual(c.percentualAtual, 0)} <span className="suave">/ {formatarPercentual(c.percentualAlvo ?? 0, 0)}</span>
+                        {Math.abs(diff) > 5 && <small style={{ display: 'block' }} className={diff < 0 ? 'queda' : 'suave'}>{diff < 0 ? 'abaixo do alvo' : 'acima do alvo'}</small>}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="nota">Atual / alvo, sem contar a reserva. O próximo aporte prioriza o que estiver abaixo.</p>
             </section>
-
-            <section className="cartao pilha">
-              <h2 className="subtitulo">Atual × alvo</h2>
-              <GraficoAlvo classes={resumo.classes} />
-              <table className="tabela corpo-pequeno">
-                <thead><tr><th>Classe</th><th className="num">Valor</th><th className="num">Atual</th><th className="num">Alvo</th></tr></thead>
-                <tbody>
-                  {resumo.classes.map((c) => (
-                    <tr key={c.classe}>
-                      <td>{NOME_CLASSE[c.classe]}</td>
-                      <td className="num">{formatarMoeda(c.valorBruto)}</td>
-                      <td className="num">{c.percentualAlvo === null ? '—' : formatarPercentual(c.percentualAtual, 1)}</td>
-                      <td className="num">{c.percentualAlvo === null ? '—' : formatarPercentual(c.percentualAlvo, 0)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="legenda">Percentuais sobre o investido, sem a reserva. Valores brutos, antes do IR.</p>
-            </section>
-
-            <section className="pilha">
-              <h2 className="subtitulo">Seus investimentos</h2>
-              {resumo.posicoes.map((p) => <LinhaPosicao key={p.ativo.id} p={p} aoAtualizar={r.recarregar} />)}
-              {d.precos[d.perfil.etf_acoes_br] && (
-                <FonteDado fonte={d.precos[d.perfil.etf_acoes_br].fonte} data={d.precos[d.perfil.etf_acoes_br].data} />
-              )}
-            </section>
-          </>
-        )}
-
-        {registrando ? (
-          <RegistrarMovimentacao d={d} aoSalvar={() => { setRegistrando(false); r.recarregar(); }} />
-        ) : (
-          <div style={{ display: 'grid', gap: 8 }}>
-            <button className="botao botao-secundario botao-largo" onClick={() => setRegistrando(true)}>
-              <Plus size={20} className="icone" aria-hidden /> Registrar compra ou venda
-            </button>
-            <p className="legenda" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              <Receipt size={16} className="icone" aria-hidden /> Para CDB e LCI, o valor mais fiel é o do extrato do banco.
-            </p>
           </div>
-        )}
-      </main>
+
+          <section className="painel">
+            <div className="painel-titulo"><h2>Investimentos</h2></div>
+            <table className="posicoes">
+              <thead>
+                <tr><th>Investimento</th><th className="num">Aplicado</th><th className="num">Valor hoje</th><th className="num">Resultado</th><th>Avaliado por</th><th aria-label="Ações" /></tr>
+              </thead>
+              <tbody>
+                {posicoes.map((p) => (
+                  <tr key={p.ativo.id}>
+                    <td>
+                      <div className="ativo-celula">
+                        <b><span className="marca-classe" style={{ background: COR_CLASSE[p.ativo.classe] }} />{p.ativo.nome}</b>
+                        <small>{NOME_CLASSE[p.ativo.classe]}{p.ativo.tipo === 'etf' && ` · ${p.quantidade.toLocaleString('pt-BR')} ${p.quantidade === 1 ? 'cota' : 'cotas'}`}</small>
+                      </div>
+                    </td>
+                    <td className="num" data-movel="oculto">{formatarMoeda(p.aplicado)}</td>
+                    <td className="num"><b>{formatarMoeda(p.valorBruto)}</b></td>
+                    <td className="num" data-movel="oculto"><Resultado valor={p.valorBruto - p.aplicado} base={p.aplicado} /></td>
+                    <td data-movel="linha">
+                      <small className="suave">{DESCRICAO_METODO[p.metodo]} · {formatarData(p.dataReferencia)}</small>
+                      {p.irEstimado > 0 && <small className="suave" style={{ display: 'block' }}>IR se resgatar hoje: {formatarMoeda(p.irEstimado)}</small>}
+                    </td>
+                    <td data-movel="linha" style={{ textAlign: 'right' }}>
+                      {p.ativo.tipo !== 'etf' && (
+                        <button className="link-discreto" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={() => setExtrato(p)}>
+                          <Receipt size={15} aria-hidden /> Extrato
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="nota">Valores brutos, antes do IR. ETFs pela cotação do dia; Tesouro pelo preço de resgate; CDB pela taxa contratada ou pelo extrato.</p>
+          </section>
+        </>
+      )}
+
+      <Folha aberta={registrando} titulo="Registrar compra ou venda" aoFechar={() => setRegistrando(false)}>
+        <FormMovimentacao d={d} aoSalvar={recarregar} />
+      </Folha>
+      <Folha aberta={extrato !== null} titulo={extrato ? `Atualizar ${extrato.ativo.nome}` : ''} aoFechar={() => setExtrato(null)}>
+        {extrato && <FormExtrato p={extrato} aoSalvar={recarregar} />}
+      </Folha>
     </>
   );
 }

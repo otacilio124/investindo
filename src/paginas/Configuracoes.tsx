@@ -2,7 +2,7 @@ import { Download, LogOut } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AvisoErro, Campo, Carregando, ErroCarga, Selecao } from '../componentes/base';
-import { Cabecalho } from '../componentes/Estrutura';
+import { CabecalhoPagina } from '../componentes/Estrutura';
 import { validarPesos } from '../domain/rateio';
 import { CARTEIRA_ALVO, type TipoPerfil } from '../domain/tipos';
 import { carregarCarteira, limparCache, movimentacoesEmCSV, salvarPerfil, useCarregar, type PerfilRow } from '../lib/dados';
@@ -217,7 +217,9 @@ export default function Configuracoes() {
   const local = useLocation();
   const aviso = (local.state as { aviso?: string } | null)?.aviso;
   const r = useCarregar(null, carregarCarteira);
-  useEffect(() => window.history.replaceState({}, ''), []);
+  useEffect(() => {
+    window.history.replaceState({}, '');
+  }, []);
 
   function exportar() {
     if (!r.dados) return;
@@ -231,8 +233,8 @@ export default function Configuracoes() {
 
   return (
     <>
-      <Cabecalho sobretitulo="Ajustes" />
-      <main className="pagina">
+      <CabecalhoPagina titulo="Ajustes" contexto="Regras do rateio e sua conta" />
+      <div className="pagina">
         {aviso && <div className="aviso aviso-info" role="status">{aviso}</div>}
         {r.carregando && !r.dados && <Carregando />}
         {!r.carregando && !r.dados && <ErroCarga mensagem={r.erro ?? ''} tentarDeNovo={r.recarregar} />}
@@ -252,7 +254,7 @@ export default function Configuracoes() {
         )}
         {sessao?.user.email && <Conta email={sessao.user.email} />}
         <p className="legenda">Investindo! é um projeto acadêmico. Não é recomendação de investimento.</p>
-      </main>
+      </div>
     </>
   );
 }
