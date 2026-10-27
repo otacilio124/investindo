@@ -163,6 +163,15 @@ Mudanças em relação ao escopo:
 - Redefinir ou trocar a senha encerra as outras sessões.
 - Excluir a conta pede a senha e a palavra EXCLUIR. A Edge Function
   `excluir-conta` apaga o usuário e envia a confirmação pelo Resend.
+- **Envio em produção: SMTP do Gmail, no lugar do Resend.** O Resend só envia
+  de um domínio verificado, e o projeto ainda não tem domínio próprio. O
+  Supabase Auth usa o SMTP do Gmail (`noreply.investindo@gmail.com`, com senha
+  de app), com limite de cerca de 500 e-mails por dia, o que basta para o uso
+  acadêmico. Os modelos de e-mail e as regras não mudam. Para voltar ao Resend,
+  basta registrar um domínio, verificá-lo (SPF e DKIM) e trocar o servidor SMTP
+  no painel; o código não muda. Enquanto isso, a função `excluir-conta` apaga a
+  conta normalmente, mas não envia o e-mail de confirmação (ele só sai com
+  `RESEND_API_KEY` configurada).
 
 ## 8. Mercado, gráficos e notícias
 
