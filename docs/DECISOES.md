@@ -192,7 +192,25 @@ Mudanças em relação ao escopo:
 - **Demonstração local:** `scripts/demo-local.sql` cria 12 meses de aportes na
   conta de teste local, com preços reais. Nunca rodar em produção.
 
-## 9. O que fica para depois
+## 9. Para quem nunca investiu
+
+- **Boas-vindas:** 4 telas curtas, mostradas uma vez depois do questionário
+  (`perfil.tutorial_visto_em`). Explicam o que o app faz, que ele nunca mexe no
+  dinheiro e convidam para o curso.
+- **Curso "Do zero ao primeiro aporte"** (`src/conteudo/curso.tsx`): 8 lições
+  de 2 a 5 minutos, cada uma com um "Na prática" ligado ao app e um teste rápido.
+  Acertar o teste marca a lição como concluída (`perfil.licoes_concluidas`), e o
+  progresso vale em qualquer aparelho. A lição 1 tem um simulador de juros
+  compostos que usa a mesma função das metas.
+- **Glossário pesquisável** com 22 termos, mais o ícone ⓘ nos termos técnicos
+  espalhados pelo app.
+- **"Comece por aqui"** no Início: checklist que se marca sozinho a partir do
+  que a pessoa fez (lições, primeiro aporte, reserva, meta). Some quando tudo
+  está feito ou quando a pessoa esconde.
+- O conteúdo é educativo, sem citar marcas de corretoras, e repete que o app
+  não recomenda investimentos.
+
+## 10. O que fica para depois
 
 - **v2:** notificação push no dia do aporte (por enquanto há um aviso na tela
   Início), alertas por e-mail de desvio e de vencimento, e o simulador completo.

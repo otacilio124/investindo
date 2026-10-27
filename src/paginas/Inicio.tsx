@@ -2,6 +2,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Clock3, Lightbulb } from 'lucide
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AvisoCache, BarraReserva, ErroCarga } from '../componentes/base';
+import { ComecePorAqui } from '../componentes/ComecePorAqui';
 import { CabecalhoPagina } from '../componentes/Estrutura';
 import { ListaNoticias } from '../componentes/mercado';
 import { BarraAlocacao, Sparkline } from '../componentes/minigraficos';
@@ -14,6 +15,7 @@ import {
   carregarAporteDoMes,
   carregarCarteira,
   estaDesatualizado,
+  montarContextoRateio,
   resumoDaCarteira,
   useCarregar,
   type AporteDoMes,
@@ -128,7 +130,10 @@ export default function Inicio() {
   const resumo = resumoDaCarteira(d);
   const rendimento = resumo.total - resumo.totalAplicado;
   const pct = resumo.totalAplicado > 0 ? (rendimento / resumo.totalAplicado) * 100 : 0;
-  const faltaReserva = Math.max(0, resumo.metaReserva - resumo.totalReserva);
+  // Mesma regra do rateio: falta menor que a compra mínima do produto conta como completa.
+  const faltaBruta = Math.max(0, resumo.metaReserva - resumo.totalReserva);
+  const tolerancia = Math.max(montarContextoRateio(d).entrada.reserva.minimo ?? 0, 100);
+  const faltaReserva = faltaBruta < tolerancia ? 0 : faltaBruta;
   const ultimaAtualizacao = Object.values(d.indicadores).reduce((a, i) => (i.atualizado_em > a ? i.atualizado_em : a), '');
 
   // Pontos de atenção: o que merece uma decisão, em linguagem direta.
@@ -154,6 +159,7 @@ export default function Inicio() {
       {cabecalho}
       {aviso && <div className="aviso aviso-info" role="status">{aviso}</div>}
       <AvisoCache salvoEm={r.doCacheDe} />
+      <ComecePorAqui d={d} reservaCompleta={faltaReserva === 0} />
 
       <div className="grade">
         {/* Patrimônio */}

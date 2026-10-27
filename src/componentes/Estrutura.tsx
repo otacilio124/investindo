@@ -1,10 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { CandlestickChart, House, Plus, Settings, Target, Wallet } from 'lucide-react';
+import { CandlestickChart, GraduationCap, House, Plus, Settings, Target, Wallet } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom';
 import { carregarPerfil } from '../lib/dados';
 import { useSessao } from '../lib/sessao';
 import { BarreiraDeErro } from './BarreiraDeErro';
+import { BoasVindas } from './BoasVindas';
 
 /* ------------------------------------------------------------------ */
 /* Cabeçalho de página: título claro e, à direita, a ação da tela      */
@@ -72,6 +73,10 @@ function Lateral() {
             <span className="so-notebook">{rotulo}</span>
           </NavLink>
         ))}
+        <NavLink to="/aprender" title="Aprender a investir" className="lateral-aprender">
+          <GraduationCap size={20} aria-hidden />
+          <span className="so-notebook">Aprender</span>
+        </NavLink>
       </nav>
 
       <div className="lateral-rodape">
@@ -95,9 +100,12 @@ function BarraTopo() {
       <Link to="/" aria-label="Investindo!, início">
         <img src="/marca/investindo-logotipo-escuro.svg" alt="Investindo!" width={124} height={17} />
       </Link>
+      <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <Link to="/aprender" className="avatar" aria-label="Aprender a investir"><GraduationCap size={18} aria-hidden /></Link>
       <Link to="/configuracoes" className="avatar" aria-label="Ajustes e conta">
         {nome || email ? iniciais(nome, email) : <Settings size={18} aria-hidden />}
       </Link>
+      </span>
     </header>
   );
 }
@@ -144,6 +152,7 @@ export function LayoutApp() {
         </AnimatePresence>
       </div>
       <Abas />
+      <BoasVindas />
     </div>
   );
 }

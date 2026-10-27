@@ -1,0 +1,146 @@
+/* =====================================================================
+   Curso para iniciantes, boas-vindas e "Comece por aqui"
+   ===================================================================== */
+
+.botao-claro { background: #fff; color: var(--floresta); }
+.botao-claro:hover { background: #EEF3EF; }
+.barra-curso { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.barra-curso span { display: block; height: 100%; background: #3DCB85; border-radius: 4px; }
+
+/* Lista de lições */
+.lista-licoes { list-style: none; margin: 0; padding: 0; display: grid; }
+.lista-licoes li + li { border-top: 1px solid var(--linha); }
+.lista-licoes a {
+  display: grid; grid-template-columns: 36px 1fr auto; gap: var(--space-4); align-items: center;
+  padding: 14px 4px; color: var(--tinta); text-decoration: none; border-radius: var(--radius-sm);
+}
+.lista-licoes a:hover { background: var(--superficie); }
+.licao-numero {
+  width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--linha); font: 600 0.875rem/1 var(--fonte-mono); color: var(--tinta-suave);
+}
+.lista-licoes a[data-feita="true"] .licao-numero { border: 0; color: var(--verde); }
+.licao-texto { display: grid; gap: 2px; min-width: 0; }
+.licao-texto b { font-weight: 600; }
+.licao-texto small { color: var(--tinta-suave); font-size: 0.875rem; line-height: 1.35; }
+.licao-tempo { font: 500 0.75rem/1 var(--fonte-mono); color: var(--tinta-suave); white-space: nowrap; }
+
+/* Glossário */
+.busca {
+  display: flex; align-items: center; gap: 8px; padding: 0 var(--space-4); min-height: 44px;
+  border: 1px solid var(--linha); border-radius: var(--radius-md); background: var(--superficie); color: var(--tinta-suave);
+}
+.busca:focus-within { border-color: var(--foco); }
+.busca input { flex: 1; border: 0; outline: 0; background: none; font: inherit; color: var(--tinta); min-width: 0; }
+.glossario { margin: 0; display: grid; gap: 0 var(--space-8); }
+@media (min-width: 900px) { .glossario { grid-template-columns: 1fr 1fr; } }
+.glossario > div { padding: 12px 0; border-top: 1px solid var(--linha); }
+.glossario dt { font-weight: 600; }
+.glossario dd { margin: 2px 0 0; color: var(--tinta-suave); font-size: 0.9375rem; line-height: 1.45; }
+
+/* Leitura da lição: coluna confortável, como um artigo */
+.licao { max-width: 720px; display: grid; gap: var(--space-6); }
+.licao-corpo { font-size: 1.0625rem; line-height: 1.7; }
+.licao-corpo p { margin: 0 0 var(--space-4); }
+.licao-corpo h3 { font: 700 1.125rem/1.3 var(--fonte-sans); margin: var(--space-8) 0 var(--space-2); }
+.licao-corpo ul, .licao-corpo ol { padding-left: 22px; margin: 0 0 var(--space-4); display: grid; gap: 8px; }
+.na-pratica {
+  margin: var(--space-6) 0; padding: var(--space-4) var(--space-6);
+  background: var(--verde-suave); border-radius: var(--radius-md); font-size: 1rem; line-height: 1.6;
+}
+.na-pratica > b { display: block; font: 700 0.8125rem/1 var(--fonte-sans); color: var(--verde); margin-bottom: 6px; }
+.comparacao {
+  margin: var(--space-4) 0; display: grid; border: 1px solid var(--linha);
+  border-radius: var(--radius-md); background: var(--superficie-elevada);
+}
+.comparacao > div { padding: 12px var(--space-4); display: grid; gap: 2px; }
+.comparacao > div + div { border-top: 1px solid var(--linha); }
+.comparacao dt { font-weight: 600; font-size: 0.9375rem; }
+.comparacao dd { margin: 0; font-size: 0.9375rem; color: var(--tinta-suave); line-height: 1.5; }
+@media (min-width: 768px) { .comparacao > div { grid-template-columns: 200px 1fr; gap: var(--space-4); } }
+
+/* Simulador de juros compostos */
+.simulador {
+  display: grid; gap: var(--space-4); padding: var(--space-6); margin: var(--space-4) 0;
+  border: 1px solid var(--linha); border-radius: var(--radius-lg); background: var(--superficie-elevada); font-size: 1rem;
+}
+.simulador label { display: grid; gap: 6px; }
+.simulador input[type="range"] { width: 100%; accent-color: var(--verde); }
+.simulador-resultado { display: grid; gap: var(--space-4); }
+@media (min-width: 600px) { .simulador-resultado { grid-template-columns: 1fr 1fr; } }
+.simulador-resultado > div { display: grid; gap: 4px; padding: var(--space-4); background: var(--superficie); border-radius: var(--radius-md); }
+.simulador-resultado span { font-size: 0.875rem; color: var(--tinta-suave); line-height: 1.3; }
+.simulador-resultado b { font: 600 1.375rem/1.2 var(--fonte-mono); }
+
+/* Teste rápido */
+.quiz {
+  display: grid; gap: var(--space-4); padding: var(--space-6);
+  border: 1px solid var(--linha); border-radius: var(--radius-lg); background: var(--superficie-elevada);
+}
+.quiz h2 { margin: 0; font: 700 0.8125rem/1 var(--fonte-sans); color: var(--verde); }
+.quiz-opcoes { display: grid; gap: 8px; }
+.quiz-opcoes button {
+  display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 12px 14px; min-height: 48px;
+  border: 1px solid var(--linha); border-radius: var(--radius-md); background: var(--superficie-elevada);
+  color: var(--tinta); font: inherit; cursor: pointer; line-height: 1.4;
+}
+.quiz-opcoes button svg { flex: none; margin-top: 2px; color: var(--tinta-suave); }
+.quiz-opcoes button:hover { border-color: var(--tinta-suave); }
+.quiz-opcoes button[data-estado="certa"] { border-color: var(--verde); background: var(--verde-suave); }
+.quiz-opcoes button[data-estado="certa"] svg { color: var(--verde); }
+.quiz-opcoes button[data-estado="errada"] { border-color: var(--negativo); background: var(--negativo-suave); }
+.quiz-opcoes button[data-estado="errada"] svg { color: var(--negativo); }
+.quiz-retorno { margin: 0; line-height: 1.5; }
+.quiz-retorno.certo b { color: var(--verde); }
+.quiz-retorno.errado b { color: var(--negativo); }
+.licao-navegacao { display: flex; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+
+/* Boas-vindas */
+.bv-fundo {
+  position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: var(--space-4);
+  background: rgba(11, 21, 16, 0.55);
+}
+.bv-caixa {
+  position: relative; width: min(520px, 100%); background: var(--superficie-elevada); border-radius: var(--radius-lg);
+  padding: var(--space-8) var(--space-6) var(--space-6); display: grid; gap: var(--space-6); overflow: hidden;
+}
+.bv-pular {
+  position: absolute; top: 12px; right: 12px; border: 0; background: none; color: var(--tinta-suave);
+  cursor: pointer; font: 500 0.875rem var(--fonte-sans); padding: 8px;
+}
+.bv-tela { display: grid; gap: var(--space-4); min-height: 230px; align-content: start; }
+.bv-icone {
+  width: 56px; height: 56px; border-radius: var(--radius-lg); display: grid; place-items: center;
+  background: var(--floresta); color: #3DCB85;
+}
+.bv-tela h2 { margin: 0; font: 800 1.5rem/1.2 var(--fonte-display); font-stretch: 112.5%; }
+.bv-texto { font-size: 1.0625rem; line-height: 1.6; color: var(--tinta); }
+.bv-passos { margin: 0; padding-left: 20px; display: grid; gap: 10px; }
+.bv-pontos { display: flex; gap: 6px; justify-content: center; }
+.bv-pontos span { width: 8px; height: 8px; border-radius: 4px; background: var(--linha); transition: width 0.25s, background 0.25s; }
+.bv-pontos span[data-ativo="true"] { width: 24px; background: var(--verde); }
+.bv-acoes { display: flex; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+
+/* Comece por aqui */
+.comece { border-color: var(--verde); }
+.comece-barra { height: 6px; background: var(--verde-suave); border-radius: 3px; overflow: hidden; }
+.comece-barra span { display: block; height: 100%; background: var(--verde); border-radius: 3px; transition: width 0.6s; }
+.comece-lista { list-style: none; margin: 0; padding: 0; display: grid; }
+.comece-lista li { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; }
+.comece-lista li + li { border-top: 1px solid var(--linha); }
+.comece-lista b { font-weight: 600; display: block; }
+.comece-lista small { display: block; color: var(--tinta-suave); font-size: 0.8125rem; line-height: 1.35; margin-top: 2px; }
+.comece-lista li[data-feito="true"] b { color: var(--tinta-suave); text-decoration: line-through; font-weight: 500; }
+.comece-marca {
+  width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--linha); display: grid; place-items: center;
+}
+.comece-lista li[data-feito="true"] .comece-marca { background: var(--verde); border-color: var(--verde); color: var(--sobre-verde); }
+.comece-lista li[data-atual="true"] .comece-marca { border-color: var(--verde); border-width: 2px; }
+.comece-lista .botao { min-height: 38px; padding: 0 14px; font-size: 0.875rem; }
+@media (max-width: 600px) {
+  .comece-lista li { grid-template-columns: 24px 1fr; }
+  .comece-lista li > a { grid-column: 2; justify-self: start; }
+}
+
+/* Barra superior do celular: atalhos lado a lado */
+.barra-topo .avatar svg { color: #fff; }

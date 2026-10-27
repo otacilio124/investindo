@@ -32,6 +32,16 @@ export interface PerfilRow {
   onboarding_concluido: boolean;
   aceite_termos_em: string | null;
   revisado_em: string | null;
+  tutorial_visto_em: string | null;
+  licoes_concluidas: string[];
+}
+
+/** Marca uma lição do curso como concluída (sem duplicar). */
+export async function concluirLicao(id: string): Promise<string[]> {
+  const p = await carregarPerfil();
+  const lista = p.licoes_concluidas.includes(id) ? p.licoes_concluidas : [...p.licoes_concluidas, id];
+  await salvarPerfil({ licoes_concluidas: lista });
+  return lista;
 }
 
 export interface IndicadorRow {

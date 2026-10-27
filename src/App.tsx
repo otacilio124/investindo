@@ -10,6 +10,7 @@ import Configuracoes from './paginas/Configuracoes';
 import Inicio from './paginas/Inicio';
 import Investir from './paginas/Investir';
 import PrimeiroAcesso from './paginas/PrimeiroAcesso';
+import { Aprender, LicaoPagina } from './paginas/Aprender';
 
 // Telas com gráficos carregam o Recharts só quando abertas.
 const Carteira = lazy(() => import('./paginas/Carteira'));
@@ -80,6 +81,8 @@ export default function App() {
             <Route path="/carteira" element={comGrafico(<Carteira />)} />
             <Route path="/metas" element={comGrafico(<Metas />)} />
             <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/aprender" element={<Aprender />} />
+            <Route path="/aprender/:id" element={<LicaoPagina />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
