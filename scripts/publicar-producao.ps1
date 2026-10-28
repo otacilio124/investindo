@@ -1,6 +1,6 @@
-# Publica o backend do Investindo! no Supabase de produção, em 4 etapas:
-#   1. segredos das funções  2. funções (coletor e excluir-conta)
-#   3. agendamento (pg_cron)  4. primeira coleta, com histórico
+﻿# Publica o backend do Investindo! no Supabase de produção, em 5 etapas:
+#   1. migrações do banco  2. segredos das funções  3. funções (coletor,
+#   historico e excluir-conta)  4. agendamento (pg_cron)  5. primeira coleta
 #
 # Uso, na pasta do projeto (depois de "npx supabase login" e "npx supabase link"):
 #   powershell -ExecutionPolicy Bypass -File scripts/publicar-producao.ps1
@@ -24,14 +24,18 @@ $segredo = ((Get-Content $arquivoSegredos) | Where-Object { $_ -like 'COLETOR_SE
 $base = "https://$ref.supabase.co"
 Write-Host "Projeto: $ref"
 
-Passo '1/4 Segredos das funções'
+Passo '1/5 Migrações do banco'
+npx supabase db push --linked --yes; Checar 'migrações'
+
+Passo '2/5 Segredos das funções'
 npx supabase secrets set --env-file $arquivoSegredos --project-ref $ref; Checar 'segredos'
 
-Passo '2/4 Publicando funções'
+Passo '3/5 Publicando funções'
 npx supabase functions deploy coletor --no-verify-jwt --project-ref $ref; Checar 'deploy do coletor'
+npx supabase functions deploy historico --project-ref $ref; Checar 'deploy de historico'
 npx supabase functions deploy excluir-conta --project-ref $ref; Checar 'deploy de excluir-conta'
 
-Passo '3/4 Agendamento (pg_cron)'
+Passo '4/5 Agendamento (pg_cron)'
 $sql = (Get-Content 'supabase/agendamento.sql' -Raw).Replace('__PROJETO_URL__', $base).Replace('__COLETOR_SEGREDO__', $segredo)
 $temp = [System.IO.Path]::GetTempFileName() + '.sql'
 try {
@@ -43,12 +47,13 @@ try {
 }
 Write-Host 'Agendamentos criados.'
 
-Passo '4/4 Primeira coleta (pode levar alguns minutos)'
+Passo '5/5 Primeira coleta (pode levar alguns minutos)'
 $tarefas = @(
   @{ nome = 'indicadores'; extra = '&desde=2025-01-01' },
   @{ nome = 'tesouro'; extra = '' },
   @{ nome = 'cotacoes'; extra = '' },
   @{ nome = 'historico'; extra = '' },
+  @{ nome = 'catalogo'; extra = '' },
   @{ nome = 'noticias'; extra = '' }
 )
 foreach ($t in $tarefas) {

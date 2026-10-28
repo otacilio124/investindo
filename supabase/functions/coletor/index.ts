@@ -2,7 +2,7 @@
 // de ETFs em fontes públicas e grava no banco. Chamado pelo pg_cron
 // (supabase/agendamento.sql) com o segredo COLETOR_SEGREDO.
 //
-//   POST /functions/v1/coletor?tarefa=indicadores|tesouro|cotacoes|historico|noticias|tudo[&desde=AAAA-MM-DD]
+//   POST /functions/v1/coletor?tarefa=indicadores|tesouro|cotacoes|historico|catalogo|noticias|tudo[&desde=AAAA-MM-DD]
 //
 // Redundância: cada dado tem uma cadeia de fontes (ver _shared/fontes.ts). Se
 // todas falham, o último valor salvo é mantido e marcado como "desatualizado":
@@ -25,11 +25,21 @@ import {
   type Cotacao,
   type Leitura,
 } from '../_shared/fontes.ts';
-import { FONTES_NOTICIAS, historicoYahoo, noticiasDaFonte, SIMBOLOS_MERCADO } from '../_shared/mercado.ts';
+import {
+  FONTES_NOTICIAS,
+  historicoYahoo,
+  lerListaBrapi,
+  noticiasDaFonte,
+  resumoDosCandles,
+  SIMBOLOS_GLOBAIS,
+  SIMBOLOS_MERCADO,
+  URL_BRAPI_LISTA,
+  type AtivoCatalogo,
+} from '../_shared/mercado.ts';
 
 type Detalhe = { item: string; ok: boolean; fonte?: string; mensagem?: string };
-type Tarefa = 'indicadores' | 'tesouro' | 'cotacoes' | 'historico' | 'noticias' | 'tudo';
-const TAREFAS: Tarefa[] = ['indicadores', 'tesouro', 'cotacoes', 'historico', 'noticias', 'tudo'];
+type Tarefa = 'indicadores' | 'tesouro' | 'cotacoes' | 'historico' | 'catalogo' | 'noticias' | 'tudo';
+const TAREFAS: Tarefa[] = ['indicadores', 'tesouro', 'cotacoes', 'historico', 'catalogo', 'noticias', 'tudo'];
 
 const hojeSP = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
 
@@ -224,6 +234,9 @@ async function codigosAcompanhados(db: SupabaseClient): Promise<string[]> {
   const codigos = new Set<string>(SIMBOLOS_MERCADO.map((s) => s.codigo));
   (catalogo ?? []).forEach((x) => codigos.add(x.codigo));
   (escolhidos ?? []).forEach((p) => { codigos.add(p.etf_acoes_br); codigos.add(p.etf_exterior); });
+  // O que alguém acompanha na lista do Mercado também fica com o gráfico em dia.
+  const { data: listas } = await db.from('lista_acompanhamento').select('codigo');
+  (listas ?? []).forEach((l) => codigos.add(l.codigo));
   return [...codigos];
 }
 
@@ -249,6 +262,58 @@ async function coletarHistorico(db: SupabaseClient): Promise<Detalhe[]> {
     } catch (e) {
       detalhes.push({ item: `historico_${codigo}`, ok: false, mensagem: `${(e as Error).message}. Mantido o histórico salvo.` });
     }
+  }
+  return detalhes;
+}
+
+/**
+ * Catálogo do mercado: a B3 inteira pela brapi (uma lista com preço, variação,
+ * volume e setor) e os ativos globais pelo Yahoo. Se uma fonte falha, o
+ * catálogo daquela parte fica com o último preço salvo.
+ */
+async function coletarCatalogo(db: SupabaseClient): Promise<Detalhe[]> {
+  const detalhes: Detalhe[] = [];
+  const token = Deno.env.get('BRAPI_TOKEN') ?? '';
+  const agora = new Date().toISOString();
+  const gravar = async (linhas: AtivoCatalogo[]) => {
+    for (let i = 0; i < linhas.length; i += 500) {
+      const { error } = await db.from('mercado_ativo').upsert(linhas.slice(i, i + 500).map((l) => ({ ...l, atualizado_em: agora })));
+      if (error) throw error;
+    }
+  };
+
+  try {
+    const b3: AtivoCatalogo[] = [];
+    for (let pagina = 1; pagina <= 3; pagina++) {
+      const json = await (await buscar(URL_BRAPI_LISTA(pagina, token), { tempoLimiteMs: 40_000, tentativas: 2 })).json();
+      b3.push(...lerListaBrapi(json));
+      if (pagina >= Number((json as { totalPages?: number }).totalPages ?? 1)) break;
+    }
+    if (b3.length < 200) throw new Error(`lista curta demais (${b3.length})`);
+    await gravar(b3);
+    detalhes.push({ item: 'catalogo_b3', ok: true, fonte: 'brapi', mensagem: `${b3.length} ativos` });
+  } catch (e) {
+    detalhes.push({ item: 'catalogo_b3', ok: false, mensagem: `${(e as Error).message}. Mantido o catálogo salvo.` });
+  }
+
+  const globais: AtivoCatalogo[] = [];
+  const falhas: string[] = [];
+  for (const s of SIMBOLOS_GLOBAIS) {
+    try {
+      const r = resumoDosCandles(await historicoYahoo(s.codigo, '5d'));
+      globais.push({
+        codigo: s.codigo, nome: s.nome, tipo: s.tipo, mercado: s.mercado, moeda: s.moeda, setor: s.setor ?? null,
+        logo_url: null, preco: r.preco, variacao: r.variacao, volume: r.volume, valor_mercado: null, fonte: 'Yahoo Finance',
+      });
+    } catch (e) {
+      falhas.push(`${s.codigo}: ${(e as Error).message}`);
+    }
+  }
+  try {
+    await gravar(globais);
+    detalhes.push({ item: 'catalogo_global', ok: globais.length > 0, fonte: 'Yahoo Finance', mensagem: `${globais.length} ativos${falhas.length ? ` · ${falhas.join(' | ')}` : ''}` });
+  } catch (e) {
+    detalhes.push({ item: 'catalogo_global', ok: false, mensagem: (e as Error).message });
   }
   return detalhes;
 }
@@ -305,6 +370,7 @@ Deno.serve(async (req) => {
     if (tarefa === 'tesouro' || tarefa === 'tudo') detalhes.push(...(await coletarTesouro(db, hoje)));
     if (tarefa === 'cotacoes' || tarefa === 'tudo') detalhes.push(...(await coletarCotacoes(db)));
     if (tarefa === 'historico' || tarefa === 'tudo') detalhes.push(...(await coletarHistorico(db)));
+    if (tarefa === 'catalogo' || tarefa === 'tudo') detalhes.push(...(await coletarCatalogo(db)));
     if (tarefa === 'noticias' || tarefa === 'tudo') detalhes.push(...(await coletarNoticias(db)));
   } catch (e) {
     detalhes.push({ item: 'geral', ok: false, mensagem: (e as Error).message });

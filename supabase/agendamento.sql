@@ -53,6 +53,9 @@ select cron.schedule('coletor-cotacoes-fechamento', '30 21 * * 1-5', $$ select p
 -- Candles (gráficos): junto com as cotações no pregão e no fechamento.
 select cron.schedule('coletor-historico', '5,35 13-20 * * 1-5', $$ select public.chamar_coletor('historico') $$);
 select cron.schedule('coletor-historico-fechamento', '40 21 * * 1-5', $$ select public.chamar_coletor('historico') $$);
+-- Catálogo do mercado (B3 inteira + globais): no meio do pregão e depois do fechamento.
+select cron.schedule('coletor-catalogo', '0 16 * * 1-5', $$ select public.chamar_coletor('catalogo') $$);
+select cron.schedule('coletor-catalogo-fechamento', '50 21 * * 1-5', $$ select public.chamar_coletor('catalogo') $$);
 -- Notícias: a cada 30 minutos, das 7h às 23h.
 select cron.schedule('coletor-noticias', '10,40 10-23,0-2 * * *', $$ select public.chamar_coletor('noticias') $$);
 -- Limpeza semanal do registro de execuções.

@@ -6,6 +6,7 @@ import App from './App';
 import './styles/global.css';
 import './styles/layout.css';
 import './styles/curso.css';
+import './styles/visual.css';
 
 // Versão nova publicada: o service worker troca e a página recarrega sozinha,
 // para ninguém ficar preso numa versão antiga guardada em cache.

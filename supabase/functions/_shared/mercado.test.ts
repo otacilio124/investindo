@@ -1,5 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { lerRSS, lerYahooHistorico, simboloYahoo, textoLimpo } from './mercado';
+import { classificarB3, lerListaBrapi, lerRSS, lerYahooHistorico, resumoDosCandles, SIMBOLOS_GLOBAIS, simboloYahoo, textoLimpo } from './mercado';
+
+describe('catálogo do mercado', () => {
+  it('classifica ações, FIIs, ETFs e BDRs da B3 e ignora o fracionário', () => {
+    expect(classificarB3({ stock: 'PETR4', type: 'stock' })).toBe('acao');
+    expect(classificarB3({ stock: 'MXRF11', type: 'fund', name: 'MAXI RENDA FUNDO DE INVESTIMENTO IMOBILIÁRIO - FII' })).toBe('fii');
+    expect(classificarB3({ stock: 'BOVA11', type: 'fund', name: 'ISHARES IBOVESPA CLASSE DE ÍNDICE' })).toBe('etf');
+    expect(classificarB3({ stock: 'AAPL34', type: 'bdr' })).toBe('bdr');
+    expect(classificarB3({ stock: 'PETR4F', type: 'stock' })).toBeNull();
+    expect(classificarB3({ stock: 'XYZ', type: 'stock' })).toBeNull();
+  });
+
+  it('lê a lista da brapi com setor traduzido e sem números inválidos', () => {
+    const linhas = lerListaBrapi({
+      stocks: [
+        { stock: 'VALE3', name: 'VALE S.A.', close: 61.59, change: -1.2, volume: 17470700, market_cap: 2.6e11, logo: 'https://icons.brapi.dev/icons/VALE3.svg', sector: 'Non-Energy Minerals', type: 'stock' },
+        { stock: 'HGLG11', name: 'PÁTRIA LOG - FUNDO DE INVESTIMENTO IMOBILIÁRIO - RESPONSABILIDADE LIMITADA', close: 0, change: null, volume: 0, logo: 'http://x', type: 'fund' },
+        { stock: 'VALE3F', name: 'VALE', close: 61.6, type: 'stock' },
+      ],
+    });
+    expect(linhas).toHaveLength(2);
+    expect(linhas[0]).toMatchObject({ codigo: 'VALE3', tipo: 'acao', setor: 'Mineração e siderurgia', preco: 61.59, variacao: -1.2, mercado: 'B3' });
+    expect(linhas[1]).toMatchObject({ codigo: 'HGLG11', tipo: 'fii', nome: 'PÁTRIA LOG - FUNDO DE INVESTIMENTO IMOBILIÁRIO', preco: null, variacao: null, logo_url: null });
+  });
+
+  it('globais têm códigos únicos e viram símbolos do Yahoo', () => {
+    const codigos = SIMBOLOS_GLOBAIS.map((s) => s.codigo);
+    expect(new Set(codigos).size).toBe(codigos.length);
+    expect(simboloYahoo('BTC')).toBe('BTC-USD');
+    expect(simboloYahoo('DJI')).toBe('^DJI');
+  });
+
+  it('resume preço e variação do dia pelos dois últimos candles', () => {
+    const c = (fechamento: number) => ({ data: '2026-10-27', abertura: fechamento, maxima: fechamento, minima: fechamento, fechamento, volume: 0 });
+    expect(resumoDosCandles([c(100), c(102)])).toEqual({ preco: 102, variacao: 2, volume: null });
+  });
+});
 
 describe('histórico OHLC do Yahoo', () => {
   const json = (quote: Record<string, (number | null)[]>, timestamp = [1792846800, 1792933200, 1793019600]) => ({

@@ -12,7 +12,7 @@ export function Sparkline({ valores, largura = 112, altura = 36, cor, area = tru
   valores: number[]; largura?: number; altura?: number; cor?: string; area?: boolean;
 }) {
   const id = useMemo(() => `sp-${Math.random().toString(36).slice(2, 9)}`, []);
-  if (valores.length < 2) return <svg width={largura} height={altura} aria-hidden />;
+  if (valores.length < 2) return <svg className="sparkline" width={largura} height={altura} aria-hidden />;
   const min = Math.min(...valores);
   const max = Math.max(...valores);
   const faixa = max - min || 1;

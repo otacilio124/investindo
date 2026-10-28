@@ -236,7 +236,28 @@ Mudanças em relação ao escopo:
 - O tipo do aporte (`mensal` ou `extra`) fica em `aporte.regras.tipo`, sem
   migração. Extras não contam como "o aporte do mês" no Início.
 
-## 11. O que fica para depois
+## 11. Mercado inteiro e visual de app de bolsa
+
+- **Catálogo:** a B3 inteira vem da brapi (`/api/quote/list`, gratuita e sem token:
+  ~1.900 ações, FIIs, ETFs e BDRs com preço, variação, volume, setor e logo; o
+  mercado fracionário fica de fora). Índices do mundo, ações dos EUA, moedas,
+  cripto e commodities (o que o app Bolsa do iPhone mostra) vêm do Yahoo. O
+  coletor grava tudo em `mercado_ativo` no meio do pregão e depois do fechamento.
+- **Gráfico sob demanda:** coletar candles de 2.000 ativos todo dia seria lento e
+  desnecessário. A função `historico` busca o histórico de um ativo só quando
+  alguém abre o gráfico dele e grava em `cotacao_diaria`, que vira cache para
+  todo mundo. Ela exige sessão e só aceita códigos do catálogo.
+- **Minha lista:** cada pessoa tem a sua (`lista_acompanhamento`, com RLS).
+  Quem ainda não mexeu vê uma lista padrão; na primeira estrela ela vira a lista
+  da pessoa. O coletor mantém em dia os gráficos de tudo que está em alguma lista.
+- **Maiores altas e baixas:** só ações, FIIs e ETFs com volume relevante, para
+  não destacar papel sem negócio. É informação, não recomendação.
+- **Visual 2:** cantos arredondados, superfícies em camadas, números em fonte
+  proporcional com algarismos tabulares, lateral neutra e recolhível (a escolha
+  fica no aparelho) e busca de ativos no topo (Ctrl+K). O verde fica para ação
+  e destaque. As cores e a marca do manual continuam as mesmas.
+
+## 12. O que fica para depois
 
 - **v2:** notificação push no dia do aporte (por enquanto há um aviso na tela
   Início), alertas por e-mail de desvio e de vencimento, e o simulador completo.

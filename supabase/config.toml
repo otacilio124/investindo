@@ -437,3 +437,7 @@ verify_jwt = false
 # Exclusão de conta: exige a sessão da própria pessoa.
 [functions.excluir-conta]
 verify_jwt = true
+
+# Candles sob demanda para o gráfico do Mercado: exige a sessão da pessoa.
+[functions.historico]
+verify_jwt = true

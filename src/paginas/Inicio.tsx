@@ -266,7 +266,7 @@ export default function Inicio() {
                   <div><b>{a.nome}</b>{a.nome !== a.codigo && <small>{a.codigo}</small>}</div>
                   <Sparkline valores={a.serie} largura={80} altura={28} area={false} />
                   <div className="preco">
-                    <span className="valor-pequeno">{formatarPreco(a.ultimo, a.unidade)}</span>
+                    <span className="valor-pequeno">{formatarPreco(a.ultimo, a.unidade, a.tipo)}</span>
                     <span className={`valor-pequeno ${a.variacao >= 0 ? 'alta' : 'queda'}`} style={{ fontSize: 12 }}>
                       {a.variacao >= 0 ? '▲ +' : '▼ '}{formatarPercentual(a.variacao)}
                     </span>

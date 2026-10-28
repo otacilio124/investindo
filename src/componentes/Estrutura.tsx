@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
-import { CandlestickChart, GraduationCap, House, Plus, Settings, Target, Wallet } from 'lucide-react';
+import { CandlestickChart, GraduationCap, House, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings, Target, Wallet } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom';
 import { carregarPerfil, useCarregar } from '../lib/dados';
 import { carregarResumoMercado, PAINEL_MERCADO, type AtivoMercado } from '../lib/mercado';
-import { FaixaCotacoes } from './mercado';
+import { BuscaAtivos, FaixaCotacoes, StatusPregao } from './mercado';
 import { useSessao } from '../lib/sessao';
 import { BarreiraDeErro } from './BarreiraDeErro';
 import { BoasVindas } from './BoasVindas';
@@ -53,38 +53,70 @@ function useNome() {
 const iniciais = (nome: string, email: string) =>
   (nome.trim() ? nome.trim().split(/\s+/).slice(0, 2).map((p) => p[0]) : [email[0] ?? '?']).join('').toUpperCase();
 
-/** Notebook: lateral completa. Tablet: só ícones. Celular: escondida. */
-function Lateral() {
+/** Logotipo na versão certa para o tema do aparelho (texto escuro no claro, claro no escuro). */
+function Marca({ simbolo = false, largura }: { simbolo?: boolean; largura: number }) {
+  const nome = simbolo ? 'investindo-simbolo' : 'investindo-logotipo';
+  return (
+    <picture>
+      <source srcSet={`/marca/${nome}-escuro.svg`} media="(prefers-color-scheme: dark)" />
+      <img src={`/marca/${nome}.svg`} alt={simbolo ? '' : 'Investindo!'} width={largura} height={simbolo ? largura : Math.round(largura * 0.135)} />
+    </picture>
+  );
+}
+
+const CHAVE_LATERAL = 'investindo:lateral-recolhida';
+
+/** Lateral recolhida (só ícones) no notebook: a escolha fica guardada neste aparelho. */
+function useLateralRecolhida(): [boolean, () => void] {
+  const [recolhida, setRecolhida] = useState(() => {
+    try { return localStorage.getItem(CHAVE_LATERAL) === '1'; } catch { return false; }
+  });
+  const alternar = () => setRecolhida((r) => {
+    try { localStorage.setItem(CHAVE_LATERAL, r ? '0' : '1'); } catch { /* sem armazenamento: vale só nesta visita */ }
+    return !r;
+  });
+  return [recolhida, alternar];
+}
+
+/** Notebook: lateral completa ou recolhida. Tablet: só ícones. Celular: escondida. */
+function Lateral({ recolhida, alternar }: { recolhida: boolean; alternar: () => void }) {
   const { nome, email } = useNome();
   return (
     <aside className="lateral" aria-label="Navegação principal">
-      <Link to="/" className="lateral-marca" aria-label="Investindo!, início">
-        <img src="/marca/investindo-simbolo-escuro.svg" alt="" width={32} height={32} className="so-tablet" />
-        <img src="/marca/investindo-logotipo-escuro.svg" alt="Investindo!" width={150} height={20} className="so-notebook" />
-      </Link>
+      <div className="lateral-topo">
+        <Link to="/" className="lateral-marca" aria-label="Investindo!, início">
+          <span className="lateral-simbolo"><Marca simbolo largura={30} /></span>
+          <span className="lateral-texto"><Marca largura={140} /></span>
+        </Link>
+        <button type="button" className="lateral-recolher" onClick={alternar}
+          aria-label={recolhida ? 'Mostrar menu completo' : 'Recolher menu'} title={recolhida ? 'Mostrar menu completo' : 'Recolher menu'} aria-pressed={recolhida}>
+          {recolhida ? <PanelLeftOpen size={18} aria-hidden /> : <PanelLeftClose size={18} aria-hidden />}
+        </button>
+      </div>
 
-      <Link to="/investir" className="lateral-investir" title="Investir este mês">
+      <Link to="/investir" className="lateral-investir" data-dica="Investir este mês" aria-label="Investir este mês">
         <Plus size={20} strokeWidth={2.25} aria-hidden />
-        <span className="so-notebook">Investir este mês</span>
+        <span className="lateral-texto">Investir este mês</span>
       </Link>
 
       <nav className="lateral-nav">
+        <span className="lateral-secao lateral-texto">Menu</span>
         {PRINCIPAIS.map(({ para, rotulo, Icone }) => (
-          <NavLink key={para} to={para} end={para === '/'} title={rotulo}>
+          <NavLink key={para} to={para} end={para === '/'} data-dica={rotulo} aria-label={rotulo}>
             <Icone size={20} aria-hidden />
-            <span className="so-notebook">{rotulo}</span>
+            <span className="lateral-texto">{rotulo}</span>
           </NavLink>
         ))}
-        <NavLink to="/aprender" title="Aprender a investir" className="lateral-aprender">
+        <NavLink to="/aprender" data-dica="Aprender a investir" aria-label="Aprender a investir">
           <GraduationCap size={20} aria-hidden />
-          <span className="so-notebook">Aprender</span>
+          <span className="lateral-texto">Aprender</span>
         </NavLink>
       </nav>
 
       <div className="lateral-rodape">
-        <NavLink to="/configuracoes" title="Ajustes e conta">
+        <NavLink to="/configuracoes" data-dica="Ajustes e conta" aria-label="Ajustes e conta">
           <span className="avatar" aria-hidden>{iniciais(nome, email)}</span>
-          <span className="so-notebook lateral-usuario">
+          <span className="lateral-texto lateral-usuario">
             <b>{nome || 'Sua conta'}</b>
             <small>Ajustes e conta</small>
           </span>
@@ -94,20 +126,39 @@ function Lateral() {
   );
 }
 
-/** Celular: barra superior com a marca e o atalho para a conta. */
+/** Tablet e notebook: barra do topo com a busca de ativos e o estado do pregão. */
+function BarraApp() {
+  return (
+    <header className="barra-app">
+      <BuscaAtivos atalho />
+      <div className="barra-app-direita"><StatusPregao /></div>
+    </header>
+  );
+}
+
+/** Celular: barra superior com a marca, a busca e o atalho para a conta. */
 function BarraTopo() {
   const { nome, email } = useNome();
+  const [buscando, setBuscando] = useState(false);
   return (
     <header className="barra-topo">
-      <Link to="/" aria-label="Investindo!, início">
-        <img src="/marca/investindo-logotipo-escuro.svg" alt="Investindo!" width={124} height={17} />
-      </Link>
-      <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-      <Link to="/aprender" className="avatar" aria-label="Aprender a investir"><GraduationCap size={18} aria-hidden /></Link>
-      <Link to="/configuracoes" className="avatar" aria-label="Ajustes e conta">
-        {nome || email ? iniciais(nome, email) : <Settings size={18} aria-hidden />}
-      </Link>
-      </span>
+      {buscando ? (
+        <div className="barra-topo-busca">
+          <BuscaAtivos autoFocus aoEscolher={() => setBuscando(false)} />
+          <button type="button" className="botao-texto" onClick={() => setBuscando(false)}>Fechar</button>
+        </div>
+      ) : (
+        <>
+          <Link to="/" aria-label="Investindo!, início"><Marca largura={124} /></Link>
+          <span className="barra-topo-acoes">
+            <button type="button" className="avatar" aria-label="Buscar ativo" onClick={() => setBuscando(true)}><Search size={18} aria-hidden /></button>
+            <Link to="/aprender" className="avatar" aria-label="Aprender a investir"><GraduationCap size={18} aria-hidden /></Link>
+            <Link to="/configuracoes" className="avatar" aria-label="Ajustes e conta">
+              {nome || email ? iniciais(nome, email) : <Settings size={18} aria-hidden />}
+            </Link>
+          </span>
+        </>
+      )}
     </header>
   );
 }
@@ -154,14 +205,16 @@ function RodapeCotacoes() {
 export function LayoutApp() {
   const local = useLocation();
   const saida = useOutlet();
+  const [recolhida, alternar] = useLateralRecolhida();
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [local.pathname]);
   return (
-    <div className="shell">
-      <Lateral />
+    <div className="shell" data-lateral={recolhida ? 'recolhida' : 'aberta'}>
+      <Lateral recolhida={recolhida} alternar={alternar} />
       <div className="shell-area">
         <BarraTopo />
+        <BarraApp />
         {/* Só a entrada é animada: esperar a saída da tela anterior (AnimatePresence mode="wait") deixava a área vazia
             quando essa animação não terminava, como depois de usar os seletores do Mercado. */}
         <motion.main key={local.pathname} className="conteudo" id="conteudo"
