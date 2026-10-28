@@ -168,3 +168,34 @@
 .oportunidades .faixa-cor { border-radius: 2px; }
 .motivos { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 0.9375rem; line-height: 1.45; color: var(--tinta); }
 .motivos li::marker { color: var(--tinta-suave); }
+
+/* Constância, comparativo e agenda */
+.constancia {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: var(--radius-md);
+  background: rgba(232, 184, 74, 0.14); color: #F5E9CC; font-size: 0.875rem; line-height: 1.4;
+}
+.constancia svg { color: #E8B84A; flex: none; margin-top: 1px; }
+.constancia b { color: #fff; }
+.comparativo {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--linha); border-radius: var(--radius-md); background: var(--superficie);
+}
+.comparativo > div { display: grid; gap: 4px; padding: 12px 14px; min-width: 0; }
+.comparativo > div + div { border-left: 1px solid var(--linha); }
+.comparativo span { font-size: 0.75rem; color: var(--tinta-suave); }
+.comparativo b { font: 600 1rem/1.25 var(--fonte-mono); overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .comparativo { grid-template-columns: 1fr; }
+  .comparativo > div + div { border-left: 0; border-top: 1px solid var(--linha); }
+}
+.agenda { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+@media (min-width: 900px) { .agenda { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.agenda li { display: grid; grid-template-columns: 52px 1fr; gap: 14px; align-items: start; }
+.agenda-data {
+  display: grid; place-items: center; height: 56px; border-radius: var(--radius-md);
+  background: var(--verde-suave); color: var(--tinta);
+}
+.agenda-data b { font: 700 1.375rem/1 var(--fonte-mono); }
+.agenda-data small { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tinta-suave); }
+.agenda li > div > b { font-weight: 600; }
+.agenda p { margin: 4px 0 0; font-size: 0.875rem; line-height: 1.45; color: var(--tinta-suave); }

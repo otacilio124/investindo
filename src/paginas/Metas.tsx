@@ -3,7 +3,9 @@ import { useState, type FormEvent } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AvisoCache, AvisoErro, BarraReserva, Campo, Carregando, ErroCarga, useCoresGrafico } from '../componentes/base';
 import { CabecalhoPagina } from '../componentes/Estrutura';
+import { PlanoNoPassado } from '../componentes/PlanoNoPassado';
 import { JURO_REAL_PROJECAO, projetarPatrimonio } from '../domain/metas';
+import { aporteMensalNecessario, mesesAte } from '../domain/simulacoes';
 import { apagarMeta, carregarCarteira, resumoDaCarteira, salvarMeta, useCarregar } from '../lib/dados';
 import { formatarData, formatarMoeda, formatarMoedaCurta, formatarPercentual, hojeSP, lerMoeda } from '../lib/formato';
 import { useSessao } from '../lib/sessao';
@@ -92,8 +94,11 @@ export default function Metas() {
           </p>
         </section>
 
+        <PlanoNoPassado d={d} aporteInicial={aporte || 70000} />
+
         <section className="pilha">
           <h2 className="subtitulo">Suas metas</h2>
+          <p className="corpo-pequeno suave" style={{ margin: 0 }}>Dê um prazo à meta e o app calcula quanto investir por mês para chegar lá.</p>
           {d.metas.length === 0 && <p className="suave corpo-pequeno">Nenhuma meta ainda. Uma viagem, a entrada de um imóvel, a aposentadoria.</p>}
           {d.metas.map((m) => {
             const alvo = Math.round(m.valor_alvo * 100);
@@ -107,6 +112,19 @@ export default function Metas() {
                 </div>
                 <BarraReserva saldo={resumo.totalInvestido} meta={alvo} />
                 <p className="legenda">{formatarMoeda(resumo.totalInvestido)} de {formatarMoeda(alvo)}{m.prazo && <> · até {formatarData(m.prazo)}</>}</p>
+                {m.prazo && (() => {
+                  const n = mesesAte(d.hoje, m.prazo);
+                  const mensal = aporteMensalNecessario(alvo, resumo.totalInvestido, n, juro);
+                  if (resumo.totalInvestido >= alvo) return <p className="corpo-pequeno alta" style={{ margin: 0 }}>Meta alcançada.</p>;
+                  if (n <= 0) return <p className="corpo-pequeno suave" style={{ margin: 0 }}>O prazo passou. Que tal definir uma nova data?</p>;
+                  return (
+                    <p className="corpo-pequeno" style={{ margin: 0 }}>
+                      {mensal === 0
+                        ? <>Só com o que já investiu, você chega lá até o prazo.</>
+                        : <>Para chegar lá em {n} {n === 1 ? 'mês' : 'meses'}, invista cerca de <b className="valor-pequeno">{formatarMoeda(mensal)}</b> por mês.</>}
+                    </p>
+                  );
+                })()}
               </article>
             );
           })}

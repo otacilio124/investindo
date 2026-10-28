@@ -1,4 +1,7 @@
-import { AlertCircle, ArrowRight, CheckCircle2, Clock3, Lightbulb } from 'lucide-react';
+import { AlertCircle, ArrowRight, CalendarPlus, CheckCircle2, Clock3, Flame, Lightbulb } from 'lucide-react';
+import { proximosEventos } from '../conteudo/calendario';
+import { sequenciaDeMeses } from '../domain/simulacoes';
+import { baixarLembreteMensal } from '../lib/simulacoes';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AvisoCache, BarraReserva, ErroCarga } from '../componentes/base';
@@ -76,6 +79,10 @@ function AporteDoMesPainel({ aporte, d }: { aporte: AporteDoMes | null; d: Dados
         <li data-estado={estado(3)}><div><b>Confirmar a compra</b><span>A carteira se atualiza sozinha.</span></div></li>
       </ol>
       {cta}
+      <button type="button" className="link-discreto" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', justifySelf: 'start' }}
+        onClick={() => baixarLembreteMensal(diaAporte)}>
+        <CalendarPlus size={15} aria-hidden /> Lembrar todo dia {diaAporte} no calendário do celular
+      </button>
     </section>
   );
 }
@@ -132,6 +139,8 @@ export default function Inicio() {
   if (!r.dados) return <>{cabecalho}<ErroCarga mensagem={r.erro ?? ''} tentarDeNovo={r.recarregar} /></>;
 
   const d = r.dados;
+  const sequencia = sequenciaDeMeses(d.movimentacoes.filter((m) => m.tipo === 'compra').map((m) => m.data), d.hoje);
+  const agenda = proximosEventos(d.hoje, 3);
   const resumo = resumoDaCarteira(d);
   const rendimento = resumo.total - resumo.totalAplicado;
   const pct = resumo.totalAplicado > 0 ? (rendimento / resumo.totalAplicado) * 100 : 0;
@@ -192,6 +201,12 @@ export default function Inicio() {
               <Sparkline valores={evolucao.map((p) => p.valor)} largura={220} altura={72} cor="#3DCB85" />
             )}
           </div>
+          {sequencia.atual >= 2 && (
+            <div className="constancia" title={`Seu recorde: ${sequencia.recorde} meses`}>
+              <Flame size={16} aria-hidden />
+              <span><b>{sequencia.atual} meses seguidos investindo.</b> {sequencia.atual >= sequencia.recorde ? 'É o seu recorde!' : `Recorde: ${sequencia.recorde}.`}{!sequencia.investiuEsteMes ? ' Falta o aporte deste mês para manter.' : ''}</span>
+            </div>
+          )}
           <BarraAlocacao partes={resumo.classes.map((c) => ({
             rotulo: NOME_CLASSE[c.classe], valor: c.valorBruto,
             cor: { reserva: 'rgba(255,255,255,.4)', renda_fixa: 'rgba(255,255,255,.92)', acoes_br: '#3DCB85', exterior: '#E8B84A' }[c.classe],
@@ -293,6 +308,28 @@ export default function Inicio() {
           </div>
           {noticias.dados ? <ListaNoticias noticias={noticias.dados} limite={5} compacta /> : <div className="esqueleto" style={{ height: 220 }} />}
         </section>
+
+        {/* Agenda econômica */}
+        {agenda.length > 0 && (
+          <section className="painel n-12">
+            <div className="painel-titulo"><h2>Agenda econômica</h2></div>
+            <ul className="agenda">
+              {agenda.map((e) => (
+                <li key={e.data + e.tipo}>
+                  <span className="agenda-data">
+                    <b>{Number(e.data.slice(8, 10))}</b>
+                    <small>{MESES[Number(e.data.slice(5, 7)) - 1].slice(0, 3)}</small>
+                  </span>
+                  <div>
+                    <b>{e.titulo}</b>{e.previsao && <span className="etiqueta" style={{ marginLeft: 8 }}>previsão</span>}
+                    <p>{e.explicacao}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p className="nota">Datas do Banco Central (Copom) e do IBGE (IPCA). Confira sempre nos sites oficiais.</p>
+          </section>
+        )}
       </div>
     </>
   );

@@ -1,4 +1,4 @@
-import { Download, Plus, Receipt } from 'lucide-react';
+import { Download, Landmark, Plus, Receipt } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { AvisoCache, AvisoErro, Campo, ErroCarga, Selecao } from '../componentes/base';
@@ -20,6 +20,9 @@ import {
   type DadosCarteira,
 } from '../lib/dados';
 import { useEvolucao } from '../lib/evolucao';
+import { useReferencias } from '../lib/simulacoes';
+
+const sinalPct = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 import { formatarData, formatarMoeda, formatarPercentual, hojeSP, lerMoeda } from '../lib/formato';
 import { useSessao } from '../lib/sessao';
 
@@ -184,6 +187,7 @@ export default function Carteira() {
   const [extrato, setExtrato] = useState<Posicao | null>(null);
   const [doMes, setDoMes] = useState<number | null>(null);
   const evolucao = useEvolucao(r.dados);
+  const referencias = useReferencias(r.dados, evolucao);
   const resumo = r.dados ? resumoDaCarteira(r.dados) : null;
 
   useEffect(() => {
@@ -203,6 +207,7 @@ export default function Carteira() {
           <Download size={18} aria-hidden /> <span className="so-notebook">Exportar</span>
         </button>
       )}
+      <Link to="/impostos" className="botao botao-secundario" title="Imposto de Renda"><Landmark size={18} aria-hidden /> <span className="so-notebook">Imposto de Renda</span></Link>
       <button className="botao botao-principal" onClick={() => setRegistrando(true)}><Plus size={18} aria-hidden /> Registrar</button>
     </>
   );
@@ -244,11 +249,34 @@ export default function Carteira() {
             <section className="painel n-8">
               <div className="painel-titulo">
                 <h2>Evolução</h2>
-                <span className="nota"><i className="traco-legenda" style={{ background: 'var(--verde)', marginLeft: 0 }} />Patrimônio <i className="traco-legenda" style={{ background: 'var(--tinta-suave)' }} />Aplicado</span>
+                <span className="nota">
+                  <i className="traco-legenda" style={{ background: 'var(--verde)', marginLeft: 0 }} />Sua carteira
+                  <i className="traco-legenda" style={{ background: 'var(--tinta-suave)' }} />Aplicado
+                  {referencias?.cdi.length ? <><i className="traco-legenda" style={{ background: 'var(--ouro)' }} />CDI</> : null}
+                  {referencias?.ibov.length ? <><i className="traco-legenda" style={{ background: 'var(--tinta)' }} />Ibovespa</> : null}
+                </span>
               </div>
               {evolucao === null && <div className="esqueleto" style={{ height: 260 }} />}
-              {evolucao && evolucao.length >= 2 && <GraficoEvolucao pontos={evolucao} altura={260} />}
+              {evolucao && evolucao.length >= 2 && (
+                <GraficoEvolucao pontos={evolucao} altura={260} referencias={[
+                  ...(referencias?.cdi.length ? [{ nome: 'CDI', token: 'ouro' as const, pontos: referencias.cdi }] : []),
+                  ...(referencias?.ibov.length ? [{ nome: 'Ibovespa', token: 'tinta' as const, pontos: referencias.ibov }] : []),
+                ]} />
+              )}
               {evolucao && evolucao.length < 2 && <p className="corpo-pequeno suave">O gráfico aparece a partir do segundo dia com investimentos.</p>}
+              {referencias?.resumo && (
+                <div className="comparativo" aria-label="Comparação com o mesmo dinheiro em outros lugares">
+                  <div><span>Sua carteira</span><b className={referencias.resumo.carteira >= 0 ? 'alta' : 'queda'}>{sinalPct(referencias.resumo.carteira)}</b></div>
+                  <div><span>Tudo no CDI</span><b>{sinalPct(referencias.resumo.cdi)}</b></div>
+                  <div><span>Tudo no Ibovespa</span><b>{referencias.resumo.ibov === null ? '—' : sinalPct(referencias.resumo.ibov)}</b></div>
+                </div>
+              )}
+              {referencias?.resumo && (
+                <p className="nota">
+                  Mesmos aportes, nas mesmas datas, como se tivessem ido todos para o CDI (renda fixa) ou todos para o Ibovespa (bolsa).
+                  Uma carteira diversificada fica no meio do caminho de propósito: rende menos que a bolsa nos anos bons e cai menos nos ruins.
+                </p>
+              )}
             </section>
 
             <section className="painel n-4">

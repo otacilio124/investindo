@@ -211,8 +211,33 @@ export function GraficoCandles({ candles, tipo, medias, altura = 360, casas = 2,
 /* Evolução do patrimônio: área do valor e linha do que foi aplicado   */
 /* ------------------------------------------------------------------ */
 
-export function GraficoEvolucao({ pontos, altura = 240 }: { pontos: { data: string; valor: number; aplicado: number }[]; altura?: number }) {
+export interface LinhaReferencia {
+  nome: string;
+  /** Nome de um token de cor do tema (ex.: 'ouro', 'tinta'). */
+  token: 'ouro' | 'tinta' | 'negativo' | 'floresta';
+  pontos: { data: string; valor: number }[];
+}
+
+export function GraficoEvolucao({ pontos, altura = 240, referencias = [] }: {
+  pontos: { data: string; valor: number; aplicado: number }[];
+  altura?: number;
+  /** Linhas extras para comparar (CDI, Ibovespa). */
+  referencias?: LinhaReferencia[];
+}) {
   const { caixa, grafico, cor } = useGrafico(altura);
+  // Chave estável: as linhas só são redesenhadas quando os dados mudam de fato.
+  const chaveReferencias = referencias.map((r) => `${r.nome}:${r.pontos.length}:${r.pontos[r.pontos.length - 1]?.valor ?? ''}`).join('|');
+
+  useEffect(() => {
+    if (!vivo(grafico) || pontos.length < 2 || referencias.length === 0) return;
+    const linhas = referencias.filter((r) => r.pontos.length > 1).map((r) => {
+      const s = grafico.addLineSeries({ color: cor[r.token], lineWidth: 2, priceLineVisible: false, lastValueVisible: false, title: r.nome });
+      s.setData(r.pontos.map((p) => ({ time: p.data as Time, value: p.valor })));
+      return s;
+    });
+    return () => removerSeries(grafico, linhas);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grafico, pontos, chaveReferencias]);
 
   useEffect(() => {
     if (!vivo(grafico) || pontos.length < 2) return;

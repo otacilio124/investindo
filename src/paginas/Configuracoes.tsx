@@ -1,6 +1,6 @@
 import { Download, LogOut } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AvisoErro, Campo, Carregando, ErroCarga, Selecao } from '../componentes/base';
 import { CabecalhoPagina } from '../componentes/Estrutura';
 import { validarPesos } from '../domain/rateio';
@@ -250,6 +250,7 @@ export default function Configuracoes() {
             <h2 className="subtitulo">Seus dados</h2>
             <p className="corpo-pequeno suave">Todas as compras e vendas em CSV. Serve de base para a declaração do IR.</p>
             <button className="botao botao-secundario" onClick={exportar}><Download size={20} className="icone" aria-hidden /> Exportar movimentações</button>
+            <Link to="/impostos" className="botao botao-secundario">Ajuda para o Imposto de Renda</Link>
           </section>
         )}
         {sessao?.user.email && <Conta email={sessao.user.email} />}
