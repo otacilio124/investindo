@@ -219,7 +219,24 @@ Mudanças em relação ao escopo:
 - O conteúdo é educativo, sem citar marcas de corretoras, e repete que o app
   não recomenda investimentos.
 
-## 10. O que fica para depois
+## 10. Aporte extra (e por que não há "dica de compra")
+
+- **Pedido:** avisar quando uma ação cai e "compensa comprar". **Decisão:** não
+  fazer recomendação baseada em queda de preço. Ela exigiria registro na CVM se
+  oferecida a terceiros, não tem base estatística confiável e contraria o
+  manual de marca ("comemoramos o hábito, não a sorte").
+- **No lugar:** o **aporte extra**. A qualquer dia, a pessoa digita um valor e
+  o app aplica o mesmo rateio do aporte mensal, priorizando o que está mais
+  abaixo do alvo que ela própria definiu.
+- **"Onde um aporte agora rende mais, pelas suas regras"**
+  (`src/domain/oportunidades.ts`, testado): o **critério** é só a distância até
+  o alvo. A queda do ETF em 30 dias e a distância até a média de 50 pregões
+  aparecem como **contexto**, com a ressalva de que ninguém sabe se o preço vai
+  subir ou cair. Classe acima do alvo nunca aparece, mesmo que tenha caído.
+- O tipo do aporte (`mensal` ou `extra`) fica em `aporte.regras.tipo`, sem
+  migração. Extras não contam como "o aporte do mês" no Início.
+
+## 11. O que fica para depois
 
 - **v2:** notificação push no dia do aporte (por enquanto há um aviso na tela
   Início), alertas por e-mail de desvio e de vencimento, e o simulador completo.

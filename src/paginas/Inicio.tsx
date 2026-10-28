@@ -22,6 +22,7 @@ import {
   type DadosCarteira,
 } from '../lib/dados';
 import { useEvolucao } from '../lib/evolucao';
+import { useOportunidades } from '../lib/oportunidades';
 import { formatarData, formatarMoeda, formatarPercentual, formatarTaxa } from '../lib/formato';
 import { carregarNoticias, carregarResumoMercado, carregarSerieIndicador, formatarPreco, PAINEL_MERCADO } from '../lib/mercado';
 import { useSessao } from '../lib/sessao';
@@ -45,10 +46,13 @@ function AporteDoMesPainel({ aporte, d }: { aporte: AporteDoMes | null; d: Dados
   if (status === 'confirmado') {
     const proximoMes = MESES[Number(d.hoje.slice(5, 7)) % 12];
     cta = (
-      <p className="corpo-pequeno" style={{ margin: 0, display: 'flex', gap: 8, alignItems: 'center' }}>
-        <CheckCircle2 size={18} className="icone alta" aria-hidden />
-        Feito: {formatarMoeda(Math.round((aporte?.valor ?? 0) * 100))} em {formatarData(aporte?.data)}. Próximo: {diaAporte} de {proximoMes}.
-      </p>
+      <>
+        <p className="corpo-pequeno" style={{ margin: 0, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <CheckCircle2 size={18} className="icone alta" aria-hidden />
+          Feito: {formatarMoeda(Math.round((aporte?.valor ?? 0) * 100))} em {formatarData(aporte?.data)}. Próximo: {diaAporte} de {proximoMes}.
+        </p>
+        <Link to="/investir?modo=extra" className="botao botao-secundario botao-largo">Investir um valor extra</Link>
+      </>
     );
   } else if (status === 'sugerido') {
     cta = <Link to="/investir" className="botao botao-principal botao-largo">Confirmar o que comprei <ArrowRight size={18} aria-hidden /></Link>;
@@ -95,6 +99,7 @@ export default function Inicio() {
     return { cdi: cdi.map(anualizar), selic: selic.map(anualizar), ipca };
   });
   const evolucao = useEvolucao(r.dados, 180);
+  const { oportunidades } = useOportunidades(r.dados);
   const [agora] = useState(() => new Date());
   useEffect(() => {
     window.history.replaceState({}, '');
@@ -138,7 +143,16 @@ export default function Inicio() {
 
   // Pontos de atenção: o que merece uma decisão, em linguagem direta.
   const atencao: { icone: 'alerta' | 'dica'; texto: ReactNode }[] = [];
+  // Classe bem abaixo do alvo: mostra o contexto do preço e o atalho para um aporte extra.
+  const destaques = oportunidades.filter((o) => o.prioridade === 'alta');
+  for (const o of destaques) {
+    atencao.push({
+      icone: 'dica',
+      texto: <>{o.motivos.slice(0, 2).join(' ')} <Link to="/investir?modo=extra">Fazer aporte extra</Link></>,
+    });
+  }
   for (const c of classesDesviadas(resumo.classes)) {
+    if (destaques.some((o) => o.classe === c.classe)) continue;
     const abaixo = c.percentualAtual < (c.percentualAlvo ?? 0);
     atencao.push({
       icone: 'dica',

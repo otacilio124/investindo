@@ -14,6 +14,9 @@ export const GLOSSARIO = {
   reserva: 'Dinheiro guardado para imprevistos, que você pode sacar no mesmo dia. Vem antes de qualquer outro investimento.',
   rateio: 'Como o app divide seu aporte: primeiro completa a reserva, depois coloca mais nas classes que estão abaixo do alvo.',
   aplicado: 'Quanto você colocou do próprio bolso, sem contar os rendimentos.',
+  oportunidade:
+    'O app compara o que você tem com os percentuais-alvo que você escolheu. A classe mais abaixo do alvo recebe mais. Não é previsão: a queda de um preço não garante que ele vá subir.',
+  media50: 'A média dos preços de fechamento dos últimos 50 dias de bolsa. Estar abaixo dela só quer dizer que o preço está menor que nos últimos meses.',
 } as const;
 
 export function Dica({ texto, sobre }: { texto: string; sobre: string }) {

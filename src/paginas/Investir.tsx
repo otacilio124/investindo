@@ -1,6 +1,6 @@
 import { ArrowRight, CheckCircle2, ExternalLink } from 'lucide-react';
 import { useMemo, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AvisoCache, AvisoErro, Campo, ErroCarga, Selecao } from '../componentes/base';
 import { CabecalhoPagina } from '../componentes/Estrutura';
 import { Dica, GLOSSARIO } from '../componentes/ui';
@@ -9,17 +9,22 @@ import { COR_CLASSE, NOME_CLASSE, type Classe } from '../domain/tipos';
 import {
   ativoDoProduto,
   cancelarAporte,
+  carregarAporteDoMes,
   carregarAportePendente,
   carregarCarteira,
   confirmarAporte,
   montarContextoRateio,
+  resumoDaCarteira,
   salvarAporteSugerido,
   ultimoValorAportado,
   useCarregar,
   type AportePendente,
   type CompraConfirmada,
   type DadosCarteira,
+  type TipoAporte,
 } from '../lib/dados';
+import { useOportunidades } from '../lib/oportunidades';
+import type { Oportunidade } from '../domain/oportunidades';
 import { formatarMoeda, formatarTaxa, hojeSP, lerMoeda } from '../lib/formato';
 import { useSessao } from '../lib/sessao';
 
@@ -237,15 +242,63 @@ function ConfirmarCompras({ d, pendente, aoTerminar }: { d: DadosCarteira; pende
 
 /* ------------------------------------------------------------------ */
 
+function Oportunidades({ itens, carregando, totalInvestido, aoUsar }: {
+  itens: Oportunidade[]; carregando: boolean; totalInvestido: number; aoUsar: (centavos: number) => void;
+}) {
+  if (carregando) return <div className="esqueleto" style={{ height: 160 }} />;
+  if (itens.length === 0) {
+    return (
+      <p className="corpo-pequeno suave" style={{ margin: 0 }}>
+        Sua carteira está perto do alvo em todas as classes. Um aporte agora seria dividido pelos seus percentuais.
+      </p>
+    );
+  }
+  return (
+    <ul className="oportunidades">
+      {itens.map((o) => {
+        // Quanto falta, em reais, para a classe voltar ao alvo (aproximado: não conta o próprio aporte).
+        const falta = Math.round((((o.alvo - o.atual) / 100) * totalInvestido) / 1000) * 1000;
+        return (
+          <li key={o.classe} data-prioridade={o.prioridade}>
+            <span className="faixa-cor" style={{ background: COR_CLASSE[o.classe] }} aria-hidden />
+            <div className="pilha-curta">
+              <div className="linha-entre" style={{ alignItems: 'center' }}>
+                <b>{NOME_CLASSE[o.classe]}</b>
+                <span className={`etiqueta ${o.prioridade === 'alta' ? 'etiqueta-alerta' : ''}`}>
+                  {o.distancia.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} pts
+                </span>
+              </div>
+              <ul className="motivos">{o.motivos.map((m) => <li key={m}>{m}</li>)}</ul>
+              {falta >= 1000 && (
+                <button type="button" className="link-discreto" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', justifySelf: 'start', textAlign: 'left' }}
+                  onClick={() => aoUsar(falta)}>
+                  Faltam cerca de {formatarMoeda(falta)} para voltar ao alvo · usar este valor
+                </button>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export default function Investir() {
   const { sessao } = useSessao();
+  const [busca] = useSearchParams();
   const carteira = useCarregar(sessao ? `carteira:${sessao.user.id}` : null, carregarCarteira);
   const pendenteR = useCarregar(null, carregarAportePendente);
   const ultimo = useCarregar(null, ultimoValorAportado);
+  const doMes = useCarregar(null, carregarAporteDoMes);
   const [valor, setValor] = useState('');
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [modoEscolhido, setModoEscolhido] = useState<TipoAporte | null>(busca.get('modo') === 'extra' ? 'extra' : null);
+  const { oportunidades, carregando: carregandoOp } = useOportunidades(carteira.dados);
+
+  // Sem escolha explícita: depois que o aporte do mês foi feito, o próximo é extra.
+  const modo: TipoAporte = modoEscolhido ?? (doMes.dados?.status === 'confirmado' ? 'extra' : 'mensal');
 
   const ctx = useMemo(() => (carteira.dados ? montarContextoRateio(carteira.dados) : null), [carteira.dados]);
   const aporte = lerMoeda(valor);
@@ -259,9 +312,9 @@ export default function Investir() {
     }
   }, [ctx, aporte]);
 
-  const cab = (etapa: Etapa) => (
+  const cab = (etapa: Etapa, tipo: TipoAporte = modo) => (
     <>
-      <CabecalhoPagina contexto="Aporte do mês" titulo="Investir" />
+      <CabecalhoPagina contexto={tipo === 'extra' ? 'Aporte extra' : 'Aporte do mês'} titulo="Investir" />
       <Etapas atual={etapa} />
     </>
   );
@@ -276,9 +329,9 @@ export default function Investir() {
   if (pendente) {
     return (
       <>
-        {cab('confirmar')}
+        {cab('confirmar', pendente.tipo)}
         <ConfirmarCompras d={d} pendente={pendente}
-          aoTerminar={(msg) => { setMensagem(msg); pendenteR.recarregar(); carteira.recarregar(); }} />
+          aoTerminar={(msg) => { setMensagem(msg); pendenteR.recarregar(); carteira.recarregar(); doMes.recarregar(); }} />
       </>
     );
   }
@@ -289,7 +342,7 @@ export default function Investir() {
     if (!previa || aporte === null) return setErro('Digite quanto quer investir, por exemplo 700.');
     setSalvando(true);
     try {
-      await salvarAporteSugerido(d, aporte, previa, ctx!);
+      await salvarAporteSugerido(d, aporte, previa, ctx!, modo);
       setValor('');
       pendenteR.recarregar();
     } catch (err) {
@@ -299,8 +352,12 @@ export default function Investir() {
     }
   }
 
-  const atalhos = [...new Set([ultimo.dados, 50000, 70000, 100000].filter((v): v is number => !!v))];
+  const atalhos = modo === 'extra'
+    ? [10000, 30000, 50000, 100000]
+    : [...new Set([ultimo.dados, 50000, 70000, 100000].filter((v): v is number => !!v))];
   const faltaReserva = Math.max(0, ctx.entrada.reserva.meta - ctx.entrada.reserva.saldo);
+  const totalInvestido = resumoDaCarteira(d).totalInvestido;
+  const usarValor = (c: number) => setValor((c / 100).toLocaleString('pt-BR', { minimumFractionDigits: c % 100 ? 2 : 0 }));
 
   return (
     <>
@@ -310,7 +367,23 @@ export default function Investir() {
 
       <div className="grade">
         <form className="painel n-5" onSubmit={seguir} noValidate>
-          <div className="painel-titulo"><h2>Quanto você vai investir?</h2></div>
+          <div className="seletor seletor-largo" role="radiogroup" aria-label="Tipo de aporte">
+            {(['mensal', 'extra'] as const).map((t) => (
+              <button key={t} type="button" role="radio" aria-checked={modo === t} onClick={() => setModoEscolhido(t)}>
+                {modo === t && <span className="seletor-fundo" />}
+                <span>{t === 'mensal' ? 'Aporte do mês' : 'Aporte extra'}</span>
+              </button>
+            ))}
+          </div>
+          <div className="painel-titulo">
+            <h2>{modo === 'extra' ? 'Quanto você quer investir agora?' : 'Quanto você vai investir?'}</h2>
+          </div>
+          {modo === 'extra' && (
+            <p className="corpo-pequeno suave" style={{ margin: 0 }}>
+              {doMes.dados?.status === 'confirmado' ? 'Seu aporte do mês já foi feito. ' : ''}
+              Dinheiro a mais vai primeiro para o que está mais abaixo do seu alvo, sem contar como o aporte do mês.
+            </p>
+          )}
           <label className="visualmente-oculto" htmlFor="valor-aporte">Valor do aporte em reais</label>
           <div className="campo-valor">
             <span aria-hidden>R$</span>
@@ -318,14 +391,11 @@ export default function Investir() {
               onChange={(e) => { setValor(e.target.value); setErro(null); }} aria-invalid={Boolean(erro)} />
           </div>
           <div className="valores-rapidos" aria-label="Valores rápidos">
-            {atalhos.map((v) => {
-              const texto = (v / 100).toLocaleString('pt-BR', { minimumFractionDigits: v % 100 ? 2 : 0 });
-              return (
-                <button key={v} type="button" aria-pressed={aporte === v} onClick={() => setValor(texto)}>
-                  {v === ultimo.dados ? `Último: ${formatarMoeda(v)}` : formatarMoeda(v).replace(',00', '')}
-                </button>
-              );
-            })}
+            {atalhos.map((v) => (
+              <button key={v} type="button" aria-pressed={aporte === v} onClick={() => usarValor(v)}>
+                {modo === 'mensal' && v === ultimo.dados ? `Último: ${formatarMoeda(v)}` : formatarMoeda(v).replace(',00', '')}
+              </button>
+            ))}
           </div>
           <AvisoErro>{erro}</AvisoErro>
           <ul className="atencao corpo-pequeno suave">
@@ -341,11 +411,13 @@ export default function Investir() {
 
         <section className="painel n-7" aria-live="polite">
           <div className="painel-titulo">
-            <h2>{previa ? `Plano para ${formatarMoeda(previa.disponivel)}` : 'Seu plano aparece aqui'}</h2>
+            <h2>{previa ? `Plano para ${formatarMoeda(previa.disponivel)}` : 'Onde um aporte agora rende mais, pelas suas regras'}</h2>
+            {!previa && <Dica sobre="como o app escolhe" texto={GLOSSARIO.oportunidade} />}
           </div>
           {previa
             ? <Plano r={previa} escolhaRF={ctx.escolhaRF} />
-            : <p className="corpo-pequeno suave" style={{ margin: 0 }}>Digite um valor ao lado. O app mostra na hora quanto vai para cada investimento e por quê.</p>}
+            : <Oportunidades itens={oportunidades} carregando={carregandoOp} totalInvestido={totalInvestido} aoUsar={usarValor} />}
+          {!previa && <p className="nota">Comparamos sua carteira com os seus percentuais-alvo. Quedas recentes de preço são só contexto: ninguém sabe se o preço vai subir ou cair.</p>}
         </section>
       </div>
     </>

@@ -320,12 +320,17 @@ export interface AporteDoMes {
 }
 
 /** Situação do aporte deste mês, para a tela inicial dizer o que falta fazer. */
+/** Aporte do mês (o planejado) ou extra (dinheiro a mais, em qualquer dia). Guardado em aporte.regras.tipo. */
+export type TipoAporte = 'mensal' | 'extra';
+
 export async function carregarAporteDoMes(): Promise<AporteDoMes> {
   const competencia = `${hojeSP().slice(0, 8)}01`;
-  const linhas = exigir<{ status: 'sugerido' | 'confirmado'; valor_informado: number; data: string }[]>(
-    await supabase.from('aporte').select('status, valor_informado, data')
+  const todas = exigir<{ status: 'sugerido' | 'confirmado'; valor_informado: number; data: string; tipo: string | null }[]>(
+    await supabase.from('aporte').select('status, valor_informado, data, tipo:regras->>tipo')
       .eq('competencia', competencia).neq('status', 'cancelado').order('criado_em', { ascending: false }),
   );
+  // Aportes extras não contam como "o aporte do mês" (aportes antigos, sem tipo, contam).
+  const linhas = todas.filter((l) => l.tipo !== 'extra');
   const feito = linhas.find((l) => l.status === 'confirmado');
   const atual = feito ?? linhas[0];
   if (!atual) return { status: 'nenhum', valor: null, data: null };
@@ -344,17 +349,18 @@ export interface AportePendente {
   id: string;
   data: string;
   valor_informado: number;
+  tipo: TipoAporte;
   itens: { id: string; classe: Classe; ativo_id: string | null; produto: string; valor_sugerido: number; quantidade_sugerida: number | null; preco_referencia: number | null; motivo: string | null }[];
 }
 
 export async function carregarAportePendente(): Promise<AportePendente | null> {
-  const linhas = exigir<(Omit<AportePendente, 'itens'> & { aporte_item: AportePendente['itens'] })[]>(
+  const linhas = exigir<(Omit<AportePendente, 'itens' | 'tipo'> & { tipo: string | null; aporte_item: AportePendente['itens'] })[]>(
     await supabase.from('aporte')
-      .select('id, data, valor_informado, aporte_item(id, classe, ativo_id, produto, valor_sugerido, quantidade_sugerida, preco_referencia, motivo)')
+      .select('id, data, valor_informado, tipo:regras->>tipo, aporte_item(id, classe, ativo_id, produto, valor_sugerido, quantidade_sugerida, preco_referencia, motivo)')
       .eq('status', 'sugerido').order('criado_em', { ascending: false }).limit(1),
   );
   const a = linhas[0];
-  return a ? { id: a.id, data: a.data, valor_informado: Number(a.valor_informado), itens: a.aporte_item } : null;
+  return a ? { id: a.id, data: a.data, valor_informado: Number(a.valor_informado), tipo: a.tipo === 'extra' ? 'extra' : 'mensal', itens: a.aporte_item } : null;
 }
 
 export function resumoDaCarteira(d: DadosCarteira) {
@@ -446,10 +452,12 @@ export async function salvarAporteSugerido(
   aporte: number,
   r: ResultadoRateio,
   ctx: ContextoRateio,
+  tipo: TipoAporte = 'mensal',
 ): Promise<string> {
   const competencia = `${d.hoje.slice(0, 8)}01`;
   const regras = {
     versao: 1,
+    tipo,
     pesos: ctx.entrada.pesos,
     saldos: ctx.entrada.saldos,
     reserva: ctx.entrada.reserva,
