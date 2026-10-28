@@ -113,8 +113,30 @@ export function AvisoErro({ children }: { children: ReactNode }) {
 
 /* ---------- Estados de carga ---------- */
 
+/**
+ * Símbolo da marca animado: as barras sobem uma depois da outra, como um
+ * gráfico em alta, e o "!" dourado fecha o ciclo. Mesmo desenho do
+ * investindo-simbolo.svg (o index.html tem uma cópia para a tela de abertura).
+ */
+export function SimboloAnimado({ tamanho = 56 }: { tamanho?: number }) {
+  return (
+    <svg className="simbolo-animado" viewBox="0 0 64 64" width={tamanho} height={tamanho} aria-hidden>
+      <rect className="sa-fundo" width="64" height="64" rx="6" />
+      <rect className="sa-barra sa-1" x="10" y="36" width="12" height="16" />
+      <rect className="sa-barra sa-2" x="26" y="24" width="12" height="28" />
+      <rect className="sa-barra sa-3" x="42" y="10" width="12" height="26" />
+      <rect className="sa-barra sa-4" x="42" y="40" width="12" height="12" />
+    </svg>
+  );
+}
+
 export function Carregando({ texto = 'Carregando…' }: { texto?: string }) {
-  return <p className="suave" role="status" aria-live="polite">{texto}</p>;
+  return (
+    <div className="carregador" role="status" aria-live="polite">
+      <SimboloAnimado />
+      <span className="carregador-texto">{texto}</span>
+    </div>
+  );
 }
 
 export function ErroCarga({ mensagem, tentarDeNovo }: { mensagem: string; tentarDeNovo: () => void }) {

@@ -471,3 +471,48 @@ body { background: var(--superficie); -webkit-font-smoothing: antialiased; }
   .lista-acompanhando .linha-mercado .preco .valor-pequeno { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .lista-acompanhando .pilula-var { min-width: 0; }
 }
+
+/* =====================================================================
+   Carregamento com o símbolo da marca
+   Ciclo de 1,8 s: as barras sobem em sequência (0–45%), seguram, e descem
+   juntas antes de recomeçar. Com "reduzir movimento", o símbolo fica parado.
+   ===================================================================== */
+.carregador {
+  display: grid; justify-items: center; align-content: center; gap: 14px;
+  min-height: min(40vh, 320px); padding: var(--space-8) 0;
+}
+.centro-tela .carregador { min-height: 0; }
+.carregador-texto { font-size: 0.875rem; color: var(--tinta-suave); animation: carregador-texto 1.8s ease-in-out infinite; }
+
+.simbolo-animado { display: block; overflow: visible; filter: drop-shadow(0 8px 24px rgba(14, 122, 75, 0.28)); }
+.simbolo-animado .sa-fundo { fill: #0A2E22; }
+.simbolo-animado .sa-1, .simbolo-animado .sa-2 { fill: #FFFFFF; }
+.simbolo-animado .sa-3, .simbolo-animado .sa-4 { fill: #C9962B; }
+@media (prefers-color-scheme: dark) {
+  .simbolo-animado .sa-fundo { fill: #0E7A4B; }
+  .simbolo-animado .sa-3, .simbolo-animado .sa-4 { fill: #E8B84A; }
+}
+.simbolo-animado .sa-barra {
+  transform-box: fill-box; transform-origin: 50% 100%;
+  animation: sa-subir 1.8s cubic-bezier(0.34, 1.4, 0.64, 1) infinite both;
+}
+.simbolo-animado .sa-2 { animation-delay: 0.12s; }
+.simbolo-animado .sa-3 { animation-delay: 0.24s; }
+/* O ponto do "!" aparece por último, com um quique. */
+.simbolo-animado .sa-4 { transform-origin: 50% 50%; animation-name: sa-ponto; animation-delay: 0.36s; }
+
+@keyframes sa-subir {
+  0% { transform: scaleY(0.12); opacity: 0.35; }
+  30%, 72% { transform: scaleY(1); opacity: 1; }
+  92%, 100% { transform: scaleY(0.12); opacity: 0.35; }
+}
+@keyframes sa-ponto {
+  0% { transform: scale(0); }
+  26%, 70% { transform: scale(1); }
+  90%, 100% { transform: scale(0); }
+}
+@keyframes carregador-texto { 50% { opacity: 0.55; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .simbolo-animado .sa-barra, .carregador-texto { animation: none; }
+}
