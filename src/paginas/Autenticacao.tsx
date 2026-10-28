@@ -1,6 +1,7 @@
-import type { EmailOtpType } from '@supabase/supabase-js';
+import type { EmailOtpType, Factor } from '@supabase/supabase-js';
+import { Fingerprint } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AvisoErro, Campo, Carregando, Logotipo } from '../componentes/base';
 import { useSessao } from '../lib/sessao';
 import { mensagemDeErro, supabase, urlDoApp } from '../lib/supabase';
@@ -76,6 +77,20 @@ export function Entrar() {
     navegar('/');
   }
 
+  async function entrarComPasskey() {
+    setErro(null);
+    setEnviando(true);
+    const { error } = await supabase.auth.signInWithPasskey();
+    setEnviando(false);
+    if (error) {
+      // Cancelar o pedido do aparelho não é erro de verdade.
+      if (/abort|cancel|NotAllowed/i.test(`${error.name} ${error.message}`)) return;
+      setErro(/not.?found|no.*credential|unknown/i.test(error.message) ? 'Este aparelho não tem passkey do Investindo!. Entre com a senha e crie uma em Ajustes.' : mensagemDeErro(error));
+      return;
+    }
+    navegar('/');
+  }
+
   return (
     <TelaAuth
       titulo="Entrar"
@@ -94,6 +109,11 @@ export function Entrar() {
         <button className="botao botao-principal botao-largo" disabled={enviando || !email || !senha}>
           {enviando ? 'Entrando…' : 'Entrar'}
         </button>
+        {'PublicKeyCredential' in window && (
+          <button type="button" className="botao botao-secundario botao-largo" disabled={enviando} onClick={entrarComPasskey}>
+            <Fingerprint size={20} className="icone" aria-hidden /> Entrar com passkey
+          </button>
+        )}
       </form>
     </TelaAuth>
   );
@@ -331,5 +351,58 @@ export function Termos() {
         <p>Você pode exportar suas movimentações em CSV e excluir a conta a qualquer momento em Ajustes. A exclusão apaga perfil, carteira, aportes e metas de forma definitiva.</p>
       </section>
     </main>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/** Segunda etapa: código de 6 dígitos do app autenticador, depois da senha. */
+export function VerificarCodigo() {
+  const { sessao, carregando, faltaSegundaEtapa } = useSessao();
+  const local = useLocation();
+  const destino = (local.state as { de?: string } | null)?.de ?? '/';
+  const [fator, setFator] = useState<Factor | null>(null);
+  const [codigo, setCodigo] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  useEffect(() => {
+    if (!sessao) return;
+    supabase.auth.mfa.listFactors().then(({ data }) => setFator(data?.totp[0] ?? null));
+  }, [sessao]);
+
+  if (carregando) return <main className="centro-tela"><Carregando /></main>;
+  if (!sessao) return <Navigate to="/entrar" replace />;
+  if (!faltaSegundaEtapa) return <Navigate to={destino} replace />;
+
+  async function verificar(e: FormEvent) {
+    e.preventDefault();
+    if (!fator) return;
+    setErro(null);
+    setEnviando(true);
+    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: fator.id, code: codigo.replace(/\D/g, '') });
+    setEnviando(false);
+    if (error) {
+      setCodigo('');
+      setErro(/invalid|expired/i.test(error.message) ? 'Código errado ou vencido. Confira o app e digite o código que está aparecendo agora.' : mensagemDeErro(error));
+    }
+    // Deu certo: a sessão passa a "aal2" e o redirecionamento acima leva ao destino.
+  }
+
+  return (
+    <TelaAuth
+      titulo="Digite o código"
+      rodape={<button type="button" className="link-discreto" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }} onClick={() => supabase.auth.signOut({ scope: 'local' })}>Entrar com outra conta</button>}
+    >
+      <form className="pilha" onSubmit={verificar} noValidate>
+        <p className="corpo-pequeno suave" style={{ margin: 0 }}>Abra o app autenticador (Google Authenticator, Microsoft Authenticator…) e digite o código de 6 dígitos do Investindo!.</p>
+        <AvisoErro>{erro}</AvisoErro>
+        <Campo rotulo="Código" inputMode="numeric" autoComplete="one-time-code" maxLength={7} autoFocus
+          value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/[^\d ]/g, ''))} className="numero" />
+        <button className="botao botao-principal botao-largo" disabled={enviando || !fator || codigo.replace(/\D/g, '').length !== 6}>
+          {enviando ? 'Conferindo…' : 'Confirmar'}
+        </button>
+      </form>
+    </TelaAuth>
   );
 }

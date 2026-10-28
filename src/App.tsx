@@ -5,7 +5,7 @@ import { LayoutApp } from './componentes/Estrutura';
 import { carregarPerfil } from './lib/dados';
 import { ProvedorSessao, useSessao } from './lib/sessao';
 import { apontaParaLocal, configurado } from './lib/supabase';
-import { ConfirmarLink, CriarConta, Entrar, EsqueciSenha, NovaSenha, Termos, VerifiqueEmail } from './paginas/Autenticacao';
+import { ConfirmarLink, CriarConta, Entrar, EsqueciSenha, NovaSenha, Termos, VerificarCodigo, VerifiqueEmail } from './paginas/Autenticacao';
 import Configuracoes from './paginas/Configuracoes';
 import Inicio from './paginas/Inicio';
 import Investir from './paginas/Investir';
@@ -17,13 +17,14 @@ import Impostos from './paginas/Impostos';
 const Carteira = lazy(() => import('./paginas/Carteira'));
 const Metas = lazy(() => import('./paginas/Metas'));
 const Mercado = lazy(() => import('./paginas/Mercado'));
+const RelatorioIR = lazy(() => import('./paginas/RelatorioIR'));
 const comGrafico = (tela: ReactNode) => <Suspense fallback={<main className="pagina"><Carregando /></main>}>{tela}</Suspense>;
 
 const telaCheia = (conteudo: ReactNode) => <main className="centro-tela">{conteudo}</main>;
 
 /** Só entra quem tem sessão; quem não fez o questionário vai para o primeiro acesso. */
 function Protegida({ children, exigeOnboarding = true }: { children: ReactNode; exigeOnboarding?: boolean }) {
-  const { sessao, carregando, recuperandoSenha } = useSessao();
+  const { sessao, carregando, recuperandoSenha, faltaSegundaEtapa } = useSessao();
   const local = useLocation();
   const [onboarding, setOnboarding] = useState<boolean | null>(null);
 
@@ -37,6 +38,7 @@ function Protegida({ children, exigeOnboarding = true }: { children: ReactNode; 
   if (carregando) return telaCheia(<Carregando />);
   if (!sessao) return <Navigate to="/entrar" replace state={{ de: local.pathname }} />;
   if (recuperandoSenha) return <Navigate to="/nova-senha" replace />;
+  if (faltaSegundaEtapa) return <Navigate to="/verificar" replace state={{ de: local.pathname }} />;
   if (onboarding === null) return telaCheia(<Carregando />);
   if (exigeOnboarding && !onboarding) return <Navigate to="/primeiro-acesso" replace />;
   if (!exigeOnboarding && onboarding) return <Navigate to="/" replace />;
@@ -45,9 +47,9 @@ function Protegida({ children, exigeOnboarding = true }: { children: ReactNode; 
 
 /** Telas de quem ainda não entrou: com sessão, vai direto para o app. */
 function Publica({ children }: { children: ReactNode }) {
-  const { sessao, carregando } = useSessao();
+  const { sessao, carregando, faltaSegundaEtapa } = useSessao();
   if (carregando) return telaCheia(<Carregando />);
-  if (sessao) return <Navigate to="/" replace />;
+  if (sessao) return <Navigate to={faltaSegundaEtapa ? '/verificar' : '/'} replace />;
   return <>{children}</>;
 }
 
@@ -82,7 +84,9 @@ export default function App() {
           <Route path="/nova-senha" element={<NovaSenha />} />
           <Route path="/auth/confirmar" element={<ConfirmarLink />} />
           <Route path="/termos" element={<Termos />} />
+          <Route path="/verificar" element={<VerificarCodigo />} />
           <Route path="/primeiro-acesso" element={<Protegida exigeOnboarding={false}><PrimeiroAcesso /></Protegida>} />
+          <Route path="/impostos/relatorio" element={<Protegida>{comGrafico(<RelatorioIR />)}</Protegida>} />
           <Route element={<Protegida><LayoutApp /></Protegida>}>
             <Route path="/" element={<Inicio />} />
             <Route path="/mercado" element={comGrafico(<Mercado />)} />

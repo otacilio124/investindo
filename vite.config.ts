@@ -30,6 +30,8 @@ export default defineConfig({
         navigateFallback: null,
         globIgnores: ['**/index.html'],
         cleanupOutdatedCaches: true,
+        // Recebe as notificações de alerta (public/push-sw.js).
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.mode === 'navigate',

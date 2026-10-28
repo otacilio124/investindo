@@ -40,6 +40,25 @@ as $$
 $$;
 revoke execute on function public.chamar_coletor(text) from public, anon, authenticated;
 
+-- Alertas (lembrete do aporte, desvio do alvo, vencimentos): usa o mesmo segredo.
+create or replace function public.chamar_alertas()
+returns bigint
+language sql
+security definer
+set search_path = ''
+as $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'projeto_url') || '/functions/v1/alertas',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'coletor_segredo')
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 150000
+  );
+$$;
+revoke execute on function public.chamar_alertas() from public, anon, authenticated;
+
 -- Horários em UTC (Brasília = UTC−3). cron.schedule com o mesmo nome substitui o agendamento.
 -- Indicadores: 20h e, como redundância, de novo às 8h.
 select cron.schedule('coletor-indicadores-noite', '0 23 * * *', $$ select public.chamar_coletor('indicadores') $$);
@@ -58,6 +77,8 @@ select cron.schedule('coletor-catalogo', '0 16 * * 1-5', $$ select public.chamar
 select cron.schedule('coletor-catalogo-fechamento', '50 21 * * 1-5', $$ select public.chamar_coletor('catalogo') $$);
 -- Notícias: a cada 30 minutos, das 7h às 23h.
 select cron.schedule('coletor-noticias', '10,40 10-23,0-2 * * *', $$ select public.chamar_coletor('noticias') $$);
+-- Alertas: todo dia às 9h de Brasília (depois da coleta da manhã).
+select cron.schedule('alertas-diarios', '0 12 * * *', $$ select public.chamar_alertas() $$);
 -- Limpeza semanal do registro de execuções.
 select cron.schedule('limpar-coleta-execucao', '0 6 * * 0',
   $$ delete from public.coleta_execucao where iniciado_em < now() - interval '60 days' $$);

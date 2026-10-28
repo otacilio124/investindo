@@ -139,7 +139,8 @@ export function FaixaCotacoes({ ativos }: { ativos: ResumoAtivo[] }) {
   if (ativos.length === 0) return null;
   const itens = [...ativos, ...ativos];
   return (
-    <div className="faixa-cotacoes" aria-label="Cotações do último pregão">
+    // tabIndex: sem animação ("reduzir movimento") a faixa rola de lado, e quem usa teclado precisa alcançá-la.
+    <div className="faixa-cotacoes" role="region" aria-label="Cotações do último pregão" tabIndex={0}>
       <div className="faixa-trilho">
         {itens.map((a, i) => (
           <span key={`${a.codigo}-${i}`} className="faixa-item" aria-hidden={i >= ativos.length}>

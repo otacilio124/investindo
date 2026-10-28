@@ -267,3 +267,35 @@ function somarDiasISO(iso: DataISO, n: number): DataISO {
 }
 
 export { aliquotaIR };
+
+export interface AportesDoMes {
+  /** "2026-10" */
+  mes: string;
+  porClasse: Record<Classe, Centavos>;
+  total: Centavos;
+}
+
+/**
+ * Quanto entrou em cada classe nos últimos `meses` meses (só compras, pelo
+ * preço pago), para o histórico de aportes. Meses sem compra aparecem zerados,
+ * assim a constância fica visível.
+ */
+export function aportesPorMes(movs: Movimentacao[], ativos: Ativo[], hoje: DataISO, meses = 12): AportesDoMes[] {
+  const classeDe = new Map(ativos.map((a) => [a.id, a.classe]));
+  const [ano, mes] = hoje.split('-').map(Number);
+  const saida: AportesDoMes[] = [];
+  for (let i = meses - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(ano, mes - 1 - i, 1));
+    saida.push({ mes: d.toISOString().slice(0, 7), porClasse: { reserva: 0, renda_fixa: 0, acoes_br: 0, exterior: 0 }, total: 0 });
+  }
+  const porMes = new Map(saida.map((m) => [m.mes, m]));
+  for (const m of movs) {
+    const alvo = porMes.get(m.data.slice(0, 7));
+    const classe = classeDe.get(m.ativoId);
+    if (!alvo || !classe || m.tipo !== 'compra') continue;
+    const valor = Math.round(m.quantidade * m.precoUnitario);
+    alvo.porClasse[classe] += valor;
+    alvo.total += valor;
+  }
+  return saida;
+}

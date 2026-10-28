@@ -64,3 +64,52 @@ export function BarraAlocacao({ partes }: { partes: { rotulo: string; valor: num
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Histórico de aportes: barras empilhadas por classe, mês a mês        */
+/* ------------------------------------------------------------------ */
+
+export interface BarraMes {
+  rotulo: string;
+  rotuloLongo: string;
+  partes: { rotulo: string; valor: number; cor: string }[];
+}
+
+export function GraficoAportes({ meses, formatar, altura = 180 }: { meses: BarraMes[]; formatar: (v: number) => string; altura?: number }) {
+  const total = (m: BarraMes) => m.partes.reduce((a, p) => a + p.valor, 0);
+  const maior = Math.max(1, ...meses.map(total));
+  const comAporte = meses.filter((m) => total(m) > 0).length;
+  return (
+    <figure className="grafico-aportes" style={{ margin: 0 }}>
+      <div className="grafico-aportes-barras" style={{ height: altura }} aria-hidden>
+        {meses.map((m, i) => {
+          const t = total(m);
+          return (
+            <div key={m.rotuloLongo} className="grafico-aportes-coluna" title={`${m.rotuloLongo}: ${formatar(t)}`}>
+              <motion.div className="grafico-aportes-pilha" data-vazio={t === 0}
+                initial={{ height: 0 }} animate={{ height: t === 0 ? 3 : `${(t / maior) * 100}%` }}
+                transition={{ duration: 0.7, delay: 0.04 * i, ease: SUAVE }}>
+                {m.partes.filter((p) => p.valor > 0).map((p) => (
+                  <span key={p.rotulo} style={{ background: p.cor, flexGrow: p.valor }} />
+                ))}
+              </motion.div>
+              <span className="grafico-aportes-mes">{m.rotulo}</span>
+            </div>
+          );
+        })}
+      </div>
+      <figcaption className="nota">
+        Aportes em {comAporte} dos últimos {meses.length} meses.
+      </figcaption>
+      <table className="visualmente-oculto">
+        <caption>Aportes por mês</caption>
+        <thead><tr><th>Mês</th><th>Total</th>{meses[0]?.partes.map((p) => <th key={p.rotulo}>{p.rotulo}</th>)}</tr></thead>
+        <tbody>
+          {meses.map((m) => (
+            <tr key={m.rotuloLongo}><td>{m.rotuloLongo}</td><td>{formatar(total(m))}</td>{m.partes.map((p) => <td key={p.rotulo}>{formatar(p.valor)}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+    </figure>
+  );
+}

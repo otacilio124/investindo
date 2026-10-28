@@ -257,11 +257,44 @@ Mudanças em relação ao escopo:
   fica no aparelho) e busca de ativos no topo (Ctrl+K). O verde fica para ação
   e destaque. As cores e a marca do manual continuam as mesmas.
 
-## 12. O que fica para depois
+## 12. Alertas, relatório do IR, segurança e qualidade
 
-- **v2:** notificação push no dia do aporte (por enquanto há um aviso na tela
-  Início), alertas por e-mail de desvio e de vencimento, e o simulador completo.
-- **v3:** relatório anual de IR (a exportação CSV já existe), passkey e
-  verificação em duas etapas.
-- PNG do logotipo completo para os e-mails. Hoje o topo usa o símbolo em PNG
-  com o nome em Arial Black, a reserva segura que o manual prevê.
+- **Alertas (v2):** a função `alertas` roda todo dia às 9h (pg_cron) e avisa no
+  dia do aporte, quando a carteira sai mais de 5 pontos do alvo (só com R$ 500
+  ou mais investidos, para o percentual dizer algo) e quando um título vence nos
+  próximos 7 dias. Cada aviso tem uma chave (`aporte:2026-11`) gravada em
+  `alerta_enviado` antes do envio, então nada sai em dobro. As regras ficam em
+  `_shared/alertas.ts`, testadas no Vitest. Para o desvio, a função avalia ETF e
+  Tesouro pelo preço do dia e o resto pelo último extrato ou pelo valor
+  aplicado; a conta completa, com a curva de cada título, continua na Carteira.
+- **Notificações:** Web Push com chaves VAPID, recebido por `public/push-sw.js`
+  dentro do service worker do PWA. Cada aparelho é uma linha em
+  `inscricao_push`; inscrições que o navegador cancelou são apagadas no envio.
+  No iPhone só funciona com o app instalado na tela de início (iOS 16.4+), e a
+  tela de Ajustes explica isso. O e-mail é opcional e sai pelo Resend.
+- **Relatório do IR (v3):** página própria pensada para papel A4; o botão chama
+  a impressão do navegador, que salva em PDF, sem biblioteca de PDF. Traz Bens e
+  Direitos em 31/12 do ano anterior e do ano (a declaração pede os dois), as
+  vendas de ETF com os DARFs e as movimentações do ano.
+- **Histórico de aportes:** barras empilhadas por classe nos últimos 12 meses,
+  com meses vazios à mostra para a constância ficar visível, e uma tabela
+  escondida com os mesmos números para leitor de tela.
+- **Passkey e duas etapas (v3):** os dois são do Supabase Auth. A verificação
+  em duas etapas é imposta no banco: uma política restritiva em cada tabela da
+  pessoa exige sessão `aal2` de quem tem um autenticador ativo, então uma
+  senha vazada não chega aos dados nem pela API.
+- **E-mails:** o topo usa o logotipo completo em PNG
+  (`scripts/gerar-png-logotipo.mjs`, 4x para telas nítidas), com o nome em
+  texto no `alt` para quando as imagens estão bloqueadas.
+- **Testes ponta a ponta e acessibilidade:** Playwright no Edge do Windows
+  (sem baixar navegador) contra o Supabase local, com contas de teste criadas e
+  apagadas em cada teste. O axe-core revisa todas as telas nos dois temas. A
+  revisão levou a escurecer o verde e o vermelho do tema claro (contraste AA em
+  texto pequeno), a deixar a faixa de cotações acessível pelo teclado e a
+  corrigir o nome do link da conta.
+
+## 13. O que fica para depois
+
+- Simulador completo (hoje as projeções ficam em Metas).
+- Códigos de recuperação para quem perder o celular com o autenticador (hoje
+  quem perde precisa de ajuda para remover o fator pelo painel do Supabase).

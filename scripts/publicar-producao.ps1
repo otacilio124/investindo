@@ -1,6 +1,6 @@
 ﻿# Publica o backend do Investindo! no Supabase de produção, em 5 etapas:
 #   1. migrações do banco  2. segredos das funções  3. funções (coletor,
-#   historico e excluir-conta)  4. agendamento (pg_cron)  5. primeira coleta
+#   historico, excluir-conta e alertas)  4. agendamento (pg_cron)  5. primeira coleta
 #
 # Uso, na pasta do projeto (depois de "npx supabase login" e "npx supabase link"):
 #   powershell -ExecutionPolicy Bypass -File scripts/publicar-producao.ps1
@@ -28,12 +28,20 @@ Passo '1/5 Migrações do banco'
 npx supabase db push --linked --yes; Checar 'migrações'
 
 Passo '2/5 Segredos das funções'
+# Chaves das notificações (VAPID): criadas uma vez e guardadas no mesmo arquivo.
+# Trocar depois invalida as inscrições dos aparelhos, então nunca recria.
+if (-not (Select-String -Path $arquivoSegredos -Pattern '^VAPID_PRIVADA=' -Quiet)) {
+  $vapid = npx web-push generate-vapid-keys --json | ConvertFrom-Json; Checar 'chaves VAPID'
+  Add-Content -Path $arquivoSegredos -Encoding ascii -Value "`nVAPID_PUBLICA=$($vapid.publicKey)`nVAPID_PRIVADA=$($vapid.privateKey)`nVAPID_CONTATO=mailto:nao-responda@investindo.app"
+  Write-Host 'Chaves das notificações criadas.'
+}
 npx supabase secrets set --env-file $arquivoSegredos --project-ref $ref; Checar 'segredos'
 
 Passo '3/5 Publicando funções'
 npx supabase functions deploy coletor --no-verify-jwt --project-ref $ref; Checar 'deploy do coletor'
 npx supabase functions deploy historico --project-ref $ref; Checar 'deploy de historico'
 npx supabase functions deploy excluir-conta --project-ref $ref; Checar 'deploy de excluir-conta'
+npx supabase functions deploy alertas --no-verify-jwt --project-ref $ref; Checar 'deploy de alertas'
 
 Passo '4/5 Agendamento (pg_cron)'
 $sql = (Get-Content 'supabase/agendamento.sql' -Raw).Replace('__PROJETO_URL__', $base).Replace('__COLETOR_SEGREDO__', $segredo)

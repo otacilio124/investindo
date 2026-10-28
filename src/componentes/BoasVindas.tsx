@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, GraduationCap, HandCoins, ShieldCheck, Sparkles } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MINUTOS_TOTAIS } from '../conteudo/curso';
 import { carregarPerfil, salvarPerfil } from '../lib/dados';
@@ -48,15 +48,19 @@ export function BoasVindas() {
   const navegar = useNavigate();
   const [aberta, setAberta] = useState(false);
   const [i, setI] = useState(0);
+  // Fechada nesta visita: não reabre se o perfil chegar antes de a gravação terminar.
+  const fechada = useRef(false);
+  const usuario = sessao?.user.id;
 
   useEffect(() => {
-    if (!sessao) return;
+    if (!usuario) return;
     carregarPerfil()
-      .then((p) => setAberta(p.onboarding_concluido && !p.tutorial_visto_em))
+      .then((p) => setAberta(!fechada.current && p.onboarding_concluido && !p.tutorial_visto_em))
       .catch(() => undefined);
-  }, [sessao]);
+  }, [usuario]);
 
   function fechar(destino?: string) {
+    fechada.current = true;
     setAberta(false);
     salvarPerfil({ tutorial_visto_em: new Date().toISOString() }).catch(() => undefined);
     if (destino) navegar(destino);

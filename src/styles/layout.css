@@ -384,7 +384,7 @@ html, body { max-width: 100%; overflow-x: clip; }
   .auth-marca h2 { font: 800 2.25rem/1.1 var(--fonte-display); font-stretch: 112.5%; margin: 0 0 var(--space-6); }
   .auth-marca ul { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-4); }
   .auth-marca li { display: grid; grid-template-columns: 24px 1fr; gap: 12px; opacity: 0.9; line-height: 1.45; }
-  .auth-marca small { opacity: 0.6; }
+  .auth-marca small { opacity: 0.85; }
 }
 
 /* Botões: um pouco mais compactos no notebook */

@@ -1,12 +1,14 @@
-import { Download, LogOut } from 'lucide-react';
+import { Bell, BellOff, Download, LogOut } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AvisoErro, Campo, Carregando, ErroCarga, Selecao } from '../componentes/base';
 import { CabecalhoPagina } from '../componentes/Estrutura';
+import { Seguranca } from '../componentes/Seguranca';
 import { validarPesos } from '../domain/rateio';
 import { CARTEIRA_ALVO, type TipoPerfil } from '../domain/tipos';
 import { carregarCarteira, limparCache, movimentacoesEmCSV, salvarPerfil, useCarregar, type PerfilRow } from '../lib/dados';
 import { hojeSP, lerMoeda } from '../lib/formato';
+import { desligarPush, enviarTeste, estadoPush, ligarPush, type EstadoPush } from '../lib/notificacoes';
 import { useSessao } from '../lib/sessao';
 import { mensagemDeErro, supabase, urlDoApp } from '../lib/supabase';
 import { erroDeSenha } from './Autenticacao';
@@ -109,6 +111,96 @@ function Perfil({ perfil, etfs, aoSalvar }: { perfil: PerfilRow; etfs: { codigo:
       </div>
       <button className="botao botao-principal botao-largo" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar regras'}</button>
     </form>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+const TEXTO_ESTADO: Record<EstadoPush, string> = {
+  'sem-suporte': 'Este navegador não recebe notificações do app. Os avisos por e-mail funcionam em qualquer lugar.',
+  'precisa-instalar': 'No iPhone, as notificações só funcionam com o app instalado: toque em Compartilhar → "Adicionar à Tela de Início" e abra por lá.',
+  bloqueado: 'As notificações estão bloqueadas para este site. Libere nas configurações do navegador e volte aqui.',
+  desligado: 'Desligadas neste aparelho.',
+  ligado: 'Ligadas neste aparelho.',
+};
+
+function Avisos({ perfil, aoSalvar }: { perfil: PerfilRow; aoSalvar: () => void }) {
+  const [estado, setEstado] = useState<EstadoPush | null>(null);
+  const [email, setEmail] = useState(perfil.alerta_email);
+  const [mensagem, setMensagem] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  useEffect(() => {
+    estadoPush().then(setEstado);
+  }, []);
+
+  const executar = async (acao: () => Promise<string | void>) => {
+    setErro(null);
+    setMensagem(null);
+    setOcupado(true);
+    try {
+      const msg = await acao();
+      if (msg) setMensagem(msg);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível agora.');
+    } finally {
+      setOcupado(false);
+      setEstado(await estadoPush());
+    }
+  };
+
+  return (
+    <section className="cartao pilha-curta" aria-labelledby="titulo-avisos">
+      <h2 className="subtitulo" id="titulo-avisos">Avisos</h2>
+      <p className="corpo-pequeno suave">
+        O Investindo! avisa no dia {perfil.dia_aporte} de cada mês, quando uma classe fica mais de 5 pontos longe do alvo e
+        quando um título vence nos próximos 7 dias.
+      </p>
+      <AvisoErro>{erro}</AvisoErro>
+      {mensagem && <div className="aviso aviso-info" role="status">{mensagem}</div>}
+
+      <div className="pilha-curta">
+        <span className="corpo-pequeno" style={{ fontWeight: 600 }}>Notificações no celular</span>
+        <span className="corpo-pequeno suave" role="status">{estado ? TEXTO_ESTADO[estado] : 'Verificando…'}</span>
+        {estado === 'desligado' && (
+          <button className="botao botao-principal" disabled={ocupado} onClick={() => executar(async () => {
+            await ligarPush();
+            if (!perfil.alerta_push) await salvarPerfil({ alerta_push: true });
+            return 'Pronto! Este aparelho vai receber os avisos.';
+          })}>
+            <Bell size={20} className="icone" aria-hidden /> Ligar notificações
+          </button>
+        )}
+        {estado === 'ligado' && (
+          <div style={{ display: 'grid', gap: 8 }}>
+            <button className="botao botao-secundario" disabled={ocupado} onClick={() => executar(async () => {
+              const n = await enviarTeste();
+              return n ? 'Teste enviado. A notificação deve aparecer em instantes.' : 'Nenhum aparelho recebeu. Desligue e ligue de novo.';
+            })}>
+              Mandar um teste
+            </button>
+            <button className="botao botao-secundario" disabled={ocupado} onClick={() => executar(async () => { await desligarPush(); return 'Notificações desligadas neste aparelho.'; })}>
+              <BellOff size={20} className="icone" aria-hidden /> Desligar neste aparelho
+            </button>
+          </div>
+        )}
+      </div>
+
+      <label className="corpo-pequeno" style={{ display: 'flex', gap: 10, alignItems: 'center', minHeight: 44 }}>
+        <input type="checkbox" checked={email} disabled={ocupado} style={{ width: 20, height: 20, accentColor: 'var(--verde)' }}
+          onChange={(e) => {
+            const marcado = e.target.checked;
+            setEmail(marcado);
+            executar(async () => {
+              await salvarPerfil({ alerta_email: marcado });
+              aoSalvar();
+              return marcado ? 'Você também vai receber os avisos por e-mail.' : 'Avisos por e-mail desligados.';
+            });
+          }} />
+        Receber os avisos também por e-mail
+      </label>
+    </section>
   );
 }
 
@@ -245,6 +337,7 @@ export default function Configuracoes() {
             aoSalvar={r.recarregar}
           />
         )}
+        {r.dados && <Avisos perfil={r.dados.perfil} aoSalvar={r.recarregar} />}
         {r.dados && (
           <section className="cartao pilha-curta">
             <h2 className="subtitulo">Seus dados</h2>
@@ -253,6 +346,7 @@ export default function Configuracoes() {
             <Link to="/impostos" className="botao botao-secundario">Ajuda para o Imposto de Renda</Link>
           </section>
         )}
+        {sessao?.user.email && <Seguranca />}
         {sessao?.user.email && <Conta email={sessao.user.email} />}
         <p className="legenda">Investindo! é um projeto acadêmico. Não é recomendação de investimento.</p>
       </div>

@@ -110,10 +110,8 @@ function layout({ previa, titulo, corpo, motivo }) {
   <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px">
     <!-- Marca -->
     <tr><td style="background:${c.floresta};border-radius:8px 8px 0 0;padding:22px 32px">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-        <td style="padding-right:12px"><img src="{{ .SiteURL }}/marca/icone-192.png" width="36" height="36" alt="" style="display:block;border:0;border-radius:4px"></td>
-        <td style="font-family:${display};font-size:20px;font-weight:900;letter-spacing:1.5px;color:#FFFFFF">INVESTINDO<span style="color:${c.ouro}">!</span></td>
-      </tr></table>
+      <!-- PNG gerado por scripts/gerar-png-logotipo.mjs; com imagens bloqueadas, o alt mostra o nome em branco. -->
+      <img src="{{ .SiteURL }}/marca/investindo-logotipo-email.png" width="240" height="32" alt="Investindo!" style="display:block;border:0;font-family:${display};font-size:20px;line-height:32px;font-weight:900;color:#FFFFFF">
     </td></tr>
     <!-- Faixa de destaque -->
     <tr><td style="height:4px;line-height:4px;font-size:0;background:${c.verde}">&nbsp;</td></tr>

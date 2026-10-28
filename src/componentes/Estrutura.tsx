@@ -114,7 +114,7 @@ function Lateral({ recolhida, alternar }: { recolhida: boolean; alternar: () => 
       </nav>
 
       <div className="lateral-rodape">
-        <NavLink to="/configuracoes" data-dica="Ajustes e conta" aria-label="Ajustes e conta">
+        <NavLink to="/configuracoes" data-dica="Ajustes e conta" aria-label={recolhida ? 'Ajustes e conta' : undefined}>
           <span className="avatar" aria-hidden>{iniciais(nome, email)}</span>
           <span className="lateral-texto lateral-usuario">
             <b>{nome || 'Sua conta'}</b>

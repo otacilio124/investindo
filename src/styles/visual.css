@@ -19,9 +19,9 @@
   --linha-forte: #CBD5CF;
   --tinta: #0E1512;
   --tinta-suave: #5A6A62;
-  --verde: #0E8A55;
+  --verde: #0E7A4B; /* 5,4:1 no branco (AA para texto pequeno) */
   --verde-suave: #E3F4EA;
-  --negativo: #D2402C;
+  --negativo: #B83420; /* 5:1 também sobre o fundo rosado das pílulas */
   --negativo-suave: #FCE9E5;
   --sombra: 0 1px 2px rgba(14, 21, 18, 0.04), 0 4px 16px rgba(14, 21, 18, 0.04);
   --sombra-flutuante: 0 12px 40px rgba(14, 21, 18, 0.16);
@@ -378,7 +378,7 @@ body { background: var(--superficie); -webkit-font-smoothing: antialiased; }
   color: var(--tinta); font: 600 0.875rem var(--fonte-sans); cursor: pointer; transition: all 0.15s;
 }
 .botao-estrela:hover { border-color: var(--tinta-suave); }
-.botao-estrela[aria-pressed="true"] { background: color-mix(in srgb, #F5B301 16%, transparent); border-color: transparent; color: #B07D00; }
+.botao-estrela[aria-pressed="true"] { background: color-mix(in srgb, #F5B301 16%, transparent); border-color: transparent; color: #8A6100; }
 @media (prefers-color-scheme: dark) { .botao-estrela[aria-pressed="true"] { color: #F5C542; } }
 .botao-estrela:disabled { opacity: 0.5; cursor: wait; }
 
@@ -515,4 +515,49 @@ body { background: var(--superficie); -webkit-font-smoothing: antialiased; }
 
 @media (prefers-reduced-motion: reduce) {
   .simbolo-animado .sa-barra, .carregador-texto { animation: none; }
+}
+
+/* =====================================================================
+   Histórico de aportes (Carteira)
+   ===================================================================== */
+.grafico-aportes-barras { display: flex; align-items: flex-end; gap: 6px; padding-bottom: 22px; position: relative; border-bottom: 1px solid var(--linha); }
+.grafico-aportes-coluna { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; position: relative; }
+.grafico-aportes-pilha { display: flex; flex-direction: column-reverse; overflow: hidden; border-radius: 6px 6px 2px 2px; min-height: 3px; }
+.grafico-aportes-pilha > span { display: block; min-height: 2px; flex-basis: 0; }
+.grafico-aportes-pilha[data-vazio="true"] { background: var(--linha); }
+.grafico-aportes-mes { position: absolute; bottom: -20px; left: 0; right: 0; text-align: center; font-size: 0.6875rem; color: var(--tinta-suave); white-space: nowrap; }
+@media (max-width: 520px) {
+  .grafico-aportes-barras { gap: 3px; }
+  .grafico-aportes-coluna:nth-child(odd) .grafico-aportes-mes { visibility: hidden; }
+}
+
+/* =====================================================================
+   Relatório anual do IR: tela e papel (A4)
+   ===================================================================== */
+.relatorio { max-width: 960px; margin: 0 auto; padding: var(--space-6) 16px var(--space-8); display: grid; gap: var(--space-6); color: var(--tinta); }
+.relatorio-acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; }
+.relatorio-cabecalho { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; padding-bottom: var(--space-4); border-bottom: 2px solid var(--verde); }
+.relatorio-cabecalho h1 { margin: 0; font-size: 1.375rem; }
+.relatorio-cabecalho p { margin: 4px 0 0; color: var(--tinta-suave); font-size: 0.875rem; }
+.relatorio h2 { font-size: 1.0625rem; margin: 0 0 8px; }
+.relatorio section { display: grid; gap: 8px; }
+.relatorio section > p { margin: 0; }
+.relatorio table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.relatorio th, .relatorio td { padding: 7px 8px; border-bottom: 1px solid var(--linha); text-align: left; vertical-align: top; }
+.relatorio th { font-size: 0.75rem; color: var(--tinta-suave); font-weight: 600; }
+.relatorio td small { display: block; color: var(--tinta-suave); }
+.relatorio .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.relatorio tfoot td { font-weight: 700; border-top: 2px solid var(--tinta); border-bottom: 0; }
+.relatorio-nota { font-size: 0.8125rem; color: var(--tinta-suave); margin: 0; }
+@media (max-width: 640px) { .relatorio table { display: block; overflow-x: auto; } }
+
+@media print {
+  @page { size: A4; margin: 14mm 12mm; }
+  html, body { background: #FFFFFF !important; }
+  .relatorio { max-width: none; padding: 0; gap: 14px; color: #000; }
+  .relatorio-acoes, .aviso-instalar, .barra-cotacoes, #abertura { display: none !important; }
+  .relatorio th, .relatorio td { border-color: #BBB; }
+  .relatorio tr, .relatorio tfoot { break-inside: avoid; }
+  .relatorio h2 { break-after: avoid; }
+  .relatorio-nota, .relatorio th, .relatorio td small, .relatorio-cabecalho p { color: #333 !important; }
 }

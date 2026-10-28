@@ -1,4 +1,4 @@
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, FileText } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ErroCarga } from '../componentes/base';
@@ -108,6 +108,7 @@ export default function Impostos() {
                 {anos.map((a) => <option key={a} value={a}>{a}</option>)}
               </select>
               {bens.length > 0 && <button type="button" className="botao botao-secundario" onClick={exportar}><Download size={16} aria-hidden /> CSV</button>}
+              <Link to={`/impostos/relatorio?ano=${ano}`} className="botao botao-principal"><FileText size={16} aria-hidden /> Relatório em PDF</Link>
             </div>
           </div>
           {anoEmCurso && <p className="aviso aviso-info" style={{ margin: 0 }}>{ano} ainda não terminou: esta é uma prévia com o que você tem hoje.</p>}

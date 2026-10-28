@@ -34,6 +34,8 @@ export interface PerfilRow {
   revisado_em: string | null;
   tutorial_visto_em: string | null;
   licoes_concluidas: string[];
+  alerta_push: boolean;
+  alerta_email: boolean;
 }
 
 /** Marca uma lição do curso como concluída (sem duplicar). */

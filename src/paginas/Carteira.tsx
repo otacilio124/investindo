@@ -4,10 +4,10 @@ import { Link } from 'react-router-dom';
 import { AvisoCache, AvisoErro, Campo, ErroCarga, Selecao } from '../componentes/base';
 import { CabecalhoPagina } from '../componentes/Estrutura';
 import { GraficoEvolucao } from '../componentes/graficos';
-import { BarraAlocacao } from '../componentes/minigraficos';
+import { BarraAlocacao, GraficoAportes } from '../componentes/minigraficos';
 import { Dica, Folha, GLOSSARIO } from '../componentes/ui';
-import { DESCRICAO_METODO, type Posicao } from '../domain/carteira';
-import { COR_CLASSE, NOME_CLASSE, type Classe, type Indexador, type TipoAtivo } from '../domain/tipos';
+import { aportesPorMes, DESCRICAO_METODO, type Posicao } from '../domain/carteira';
+import { CLASSES_INVESTIMENTO, COR_CLASSE, NOME_CLASSE, type Classe, type Indexador, type TipoAtivo } from '../domain/tipos';
 import {
   carregarCarteira,
   criarAtivoProprio,
@@ -25,6 +25,11 @@ import { useReferencias } from '../lib/simulacoes';
 const sinalPct = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 import { formatarData, formatarMoeda, formatarPercentual, hojeSP, lerMoeda } from '../lib/formato';
 import { useSessao } from '../lib/sessao';
+
+const TODAS_CLASSES: Classe[] = ['reserva', ...CLASSES_INVESTIMENTO];
+
+const nomeMes = (mes: string, estilo: 'short' | 'long') =>
+  new Date(`${mes}-15T12:00:00Z`).toLocaleDateString('pt-BR', estilo === 'short' ? { month: 'short', timeZone: 'UTC' } : { month: 'long', year: 'numeric', timeZone: 'UTC' }).replace('.', '');
 
 const numeroBR = (s: string) => Number(s.trim().replace(/\./g, '').replace(',', '.'));
 
@@ -299,6 +304,21 @@ export default function Carteira() {
               <p className="nota">Atual / alvo, sem contar a reserva. O próximo aporte prioriza o que estiver abaixo.</p>
             </section>
           </div>
+
+          <section className="painel">
+            <div className="painel-titulo"><h2>Aportes por mês</h2><span className="nota">últimos 12 meses</span></div>
+            <GraficoAportes
+              formatar={formatarMoeda}
+              meses={aportesPorMes(d.movimentacoes, d.ativos, d.hoje).map((m) => ({
+                rotulo: nomeMes(m.mes, 'short'),
+                rotuloLongo: nomeMes(m.mes, 'long'),
+                partes: TODAS_CLASSES.map((c) => ({ rotulo: NOME_CLASSE[c], valor: m.porClasse[c], cor: COR_CLASSE[c] })),
+              }))}
+            />
+            <div className="legenda-alocacao" aria-hidden>
+              {TODAS_CLASSES.map((c) => <span key={c}><i style={{ background: COR_CLASSE[c] }} />{NOME_CLASSE[c]}</span>)}
+            </div>
+          </section>
 
           <section className="painel">
             <div className="painel-titulo"><h2>Investimentos</h2></div>
