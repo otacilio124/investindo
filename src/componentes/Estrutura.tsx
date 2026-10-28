@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CandlestickChart, GraduationCap, House, Plus, Settings, Target, Wallet } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom';
@@ -162,12 +162,12 @@ export function LayoutApp() {
       <Lateral />
       <div className="shell-area">
         <BarraTopo />
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.main key={local.pathname} className="conteudo" id="conteudo"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-            <BarreiraDeErro chave={local.pathname}>{saida}</BarreiraDeErro>
-          </motion.main>
-        </AnimatePresence>
+        {/* Só a entrada é animada: esperar a saída da tela anterior (AnimatePresence mode="wait") deixava a área vazia
+            quando essa animação não terminava, como depois de usar os seletores do Mercado. */}
+        <motion.main key={local.pathname} className="conteudo" id="conteudo"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+          <BarreiraDeErro chave={local.pathname}>{saida}</BarreiraDeErro>
+        </motion.main>
         <RodapeCotacoes />
       </div>
       <Abas />
