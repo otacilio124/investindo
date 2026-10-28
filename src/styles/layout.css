@@ -13,16 +13,23 @@
 
 body { background: var(--superficie); }
 
+/* Rede de segurança: nada pode alargar a página além da tela (no app instalado
+   isso deslocava o topo e cortava o conteúdo à direita). "clip" não quebra o sticky. */
+html, body { max-width: 100%; overflow-x: clip; }
+
 .shell { min-height: 100dvh; }
 .shell-area { min-width: 0; }
 
 .conteudo {
   max-width: var(--conteudo-max);
   margin: 0 auto;
-  padding: var(--space-4) var(--space-4) calc(96px + env(safe-area-inset-bottom));
+  padding: var(--space-4) max(var(--space-4), env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
   display: grid;
+  /* Uma coluna que nunca passa da largura disponível: filhos largos encolhem ou rolam por dentro. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
 }
+.conteudo > * { min-width: 0; }
 /* Telas antigas dentro do novo conteúdo: sem padding duplicado. */
 .conteudo > .pagina, .conteudo .pagina { padding: 0; max-width: none; margin: 0; }
 
@@ -32,8 +39,9 @@ body { background: var(--superficie); }
 .barra-topo {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between;
-  padding: calc(10px + env(safe-area-inset-top)) var(--space-4) 10px;
+  padding: calc(12px + env(safe-area-inset-top)) max(var(--space-4), env(safe-area-inset-right)) 12px max(var(--space-4), env(safe-area-inset-left));
   background: var(--floresta);
+  min-height: calc(60px + env(safe-area-inset-top));
 }
 .barra-topo img { display: block; }
 
@@ -338,7 +346,13 @@ body { background: var(--superficie); }
 /* Etapas do aporte */
 .etapas { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-2); overflow-x: auto; }
 .etapas li {
-  flex: 1; min-width: 92px; display: grid; gap: 6px; font-size: 0.8125rem; color: var(--tinta-suave);
+  flex: 1 1 0; min-width: 0; display: grid; gap: 6px; align-content: start;
+  font-size: 0.8125rem; line-height: 1.25; color: var(--tinta-suave);
+}
+/* No celular só a etapa atual mostra o nome; as outras ficam só na barra. */
+@media (max-width: 480px) {
+  .etapas li:not([data-estado="atual"]) { font-size: 0; }
+  .etapas li[data-estado="atual"] { flex-grow: 1.6; }
 }
 .etapas li::before { content: ""; height: 4px; border-radius: 2px; background: var(--linha); }
 .etapas li[data-estado="feito"]::before, .etapas li[data-estado="atual"]::before { background: var(--verde); }
