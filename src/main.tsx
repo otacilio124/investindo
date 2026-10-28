@@ -53,3 +53,44 @@ createRoot(document.getElementById('root')!).render(
     </MotionConfig>
   </StrictMode>,
 );
+
+/**
+ * A abertura do index.html fica por cima enquanto o app ainda está no
+ * "Carregando…" de tela cheia, e só sai quando o símbolo está completo (todas
+ * as barras em pé e o "!"), nunca no meio da subida. O ciclo tem 1,8 s e o
+ * símbolo fica inteiro entre 0,9 s e 1,15 s de cada volta.
+ */
+function fecharAbertura() {
+  const abertura = document.getElementById('abertura');
+  const raiz = document.getElementById('root');
+  if (!abertura || !raiz) return;
+  const CICLO = 1800;
+  const COMPLETO_DE = 900;
+  const COMPLETO_ATE = 1150;
+  const animacao = abertura.querySelector('.sa-1')?.getAnimations?.()[0];
+  let fechando = false;
+
+  const sair = () => {
+    abertura.classList.add('saindo');
+    abertura.setAttribute('aria-hidden', 'true');
+    setTimeout(() => abertura.remove(), 400);
+  };
+  const tentar = (forcar = false) => {
+    const pronto = raiz.childElementCount > 0 && !raiz.querySelector('.centro-tela > .carregador');
+    if (fechando || (!pronto && !forcar)) return;
+    fechando = true;
+    observador.disconnect();
+    // Sem animação (reduzir movimento): sai assim que o app estiver pronto.
+    const t = Number(animacao?.currentTime ?? NaN);
+    if (!animacao || Number.isNaN(t)) return sair();
+    const p = t % CICLO;
+    setTimeout(sair, p >= COMPLETO_DE && p <= COMPLETO_ATE ? 0 : (COMPLETO_DE - p + CICLO) % CICLO);
+  };
+
+  const observador = new MutationObserver(() => tentar());
+  observador.observe(raiz, { childList: true, subtree: true });
+  tentar();
+  // Se a sessão demorar demais, mostra o app (com o carregador dele) mesmo assim.
+  setTimeout(() => tentar(true), 6000);
+}
+fecharAbertura();

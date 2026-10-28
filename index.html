@@ -58,7 +58,8 @@
          Mesma animação do componente Carregando (src/styles/visual.css), copiada
          aqui porque roda antes de qualquer CSS do app chegar. */
       html, body { margin: 0; background: #F3F5F4; }
-      .abertura { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; align-content: center; gap: 18px; }
+      .abertura { position: fixed; inset: 0; z-index: 1000; background: #F3F5F4; display: grid; place-items: center; align-content: center; gap: 18px; transition: opacity 0.35s ease, transform 0.35s ease; }
+      .abertura.saindo { opacity: 0; transform: scale(1.04); pointer-events: none; }
       .abertura-nome { font: 800 1.125rem/1 "Archivo", "Arial Black", sans-serif; font-stretch: 112.5%; letter-spacing: 0.04em; color: #0A2E22; }
       .abertura-nome b { color: #C9962B; }
       .abertura .sa-fundo { fill: #0A2E22; }
@@ -71,7 +72,7 @@
       @keyframes sa-subir { 0% { transform: scaleY(0.12); opacity: 0.35; } 30%, 72% { transform: scaleY(1); opacity: 1; } 92%, 100% { transform: scaleY(0.12); opacity: 0.35; } }
       @keyframes sa-ponto { 0% { transform: scale(0); } 26%, 70% { transform: scale(1); } 90%, 100% { transform: scale(0); } }
       @media (prefers-color-scheme: dark) {
-        html, body { background: #070B09; }
+        html, body, .abertura { background: #070B09; }
         .abertura-nome { color: #ECF2EE; }
         .abertura-nome b { color: #E8B84A; }
         .abertura .sa-fundo { fill: #0E7A4B; }
@@ -81,18 +82,19 @@
     </style>
   </head>
   <body>
-    <div id="root">
-      <div class="abertura" role="status" aria-label="Carregando o Investindo!">
-        <svg viewBox="0 0 64 64" width="72" height="72" aria-hidden="true">
-          <rect class="sa-fundo" width="64" height="64" rx="6" />
-          <rect class="sa-barra sa-1" x="10" y="36" width="12" height="16" />
-          <rect class="sa-barra sa-2" x="26" y="24" width="12" height="28" />
-          <rect class="sa-barra sa-3" x="42" y="10" width="12" height="26" />
-          <rect class="sa-barra sa-4" x="42" y="40" width="12" height="12" />
-        </svg>
-        <span class="abertura-nome">INVESTINDO<b>!</b></span>
-      </div>
+    <!-- Fora do #root: o React monta por baixo e o main.tsx tira a abertura
+         quando o app tem o que mostrar, sempre com o símbolo completo. -->
+    <div id="abertura" class="abertura" role="status" aria-label="Carregando o Investindo!">
+      <svg viewBox="0 0 64 64" width="72" height="72" aria-hidden="true">
+        <rect class="sa-fundo" width="64" height="64" rx="6" />
+        <rect class="sa-barra sa-1" x="10" y="36" width="12" height="16" />
+        <rect class="sa-barra sa-2" x="26" y="24" width="12" height="28" />
+        <rect class="sa-barra sa-3" x="42" y="10" width="12" height="26" />
+        <rect class="sa-barra sa-4" x="42" y="40" width="12" height="12" />
+      </svg>
+      <span class="abertura-nome">INVESTINDO<b>!</b></span>
     </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
