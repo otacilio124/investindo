@@ -17,6 +17,7 @@ const COMO_DECLARAR: Record<string, string> = {
   tesouro: 'Ficha "Bens e Direitos", grupo de Aplicações e Investimentos, opção de títulos públicos. Use o informe de rendimentos da corretora.',
   cdb: 'Ficha "Bens e Direitos", grupo de Aplicações e Investimentos (CDB, RDB). O banco envia o informe de rendimentos com os valores.',
   lci_lca: 'Ficha "Bens e Direitos" (Aplicações e Investimentos) e o rendimento em "Rendimentos Isentos e Não Tributáveis".',
+  fundo: 'Ficha "Bens e Direitos", grupo de Fundos. O banco desconta o IR (come-cotas em maio e novembro) e manda o informe de rendimentos com o código certo.',
   outro: 'Confira no informe de rendimentos da instituição em que o investimento está.',
 };
 

@@ -11,3 +11,4 @@ supabase/functions/.env
 supabase/functions/.env.producao
 test-results
 playwright-report
+linkedin/

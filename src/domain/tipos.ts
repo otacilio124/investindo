@@ -35,7 +35,7 @@ export const COR_CLASSE: Record<Classe, string> = {
 };
 
 export type Indexador = 'pre' | 'cdi' | 'selic' | 'ipca' | 'nenhum';
-export type TipoAtivo = 'etf' | 'tesouro' | 'cdb' | 'lci_lca' | 'outro';
+export type TipoAtivo = 'etf' | 'tesouro' | 'cdb' | 'lci_lca' | 'fundo' | 'outro';
 
 export const reais = (centavos: Centavos): number => centavos / 100;
 export const centavos = (reaisValor: number): Centavos => Math.round(reaisValor * 100);

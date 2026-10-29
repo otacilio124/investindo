@@ -18,6 +18,8 @@ export interface Ativo {
   indexador: Indexador;
   vencimento: DataISO | null;
   isentoIR: boolean;
+  /** Banco ou corretora onde o investimento está (ativos próprios). */
+  emissor?: string | null;
 }
 
 export interface Movimentacao {

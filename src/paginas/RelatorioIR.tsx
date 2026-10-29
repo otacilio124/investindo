@@ -17,6 +17,7 @@ const DISCRIMINACAO: Record<string, string> = {
   tesouro: 'Aplicações e investimentos (04) · Títulos públicos (02)',
   cdb: 'Aplicações e investimentos (04) · CDB, RDB e outros (02)',
   lci_lca: 'Aplicações e investimentos (04) · LCI, LCA e outros (03)',
+  fundo: 'Fundos (07) · código conforme o informe do banco',
   outro: 'Confira no informe de rendimentos',
 };
 

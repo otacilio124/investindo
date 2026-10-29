@@ -69,6 +69,7 @@ interface AtivoRow {
   vencimento: string | null;
   isento_ir: boolean;
   liquidez_diaria: boolean;
+  emissor: string | null;
 }
 
 interface MovRow {
@@ -218,7 +219,7 @@ export interface DadosCarteira {
 
 const paraAtivo = (a: AtivoRow): Ativo => ({
   id: a.id, codigo: a.codigo, nome: a.nome, classe: a.classe, tipo: a.tipo,
-  indexador: a.indexador, vencimento: a.vencimento, isentoIR: a.isento_ir,
+  indexador: a.indexador, vencimento: a.vencimento, isentoIR: a.isento_ir, emissor: a.emissor,
 });
 
 export async function carregarCarteira(): Promise<DadosCarteira> {

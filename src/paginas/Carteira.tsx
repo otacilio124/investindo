@@ -6,7 +6,7 @@ import { CabecalhoPagina } from '../componentes/Estrutura';
 import { GraficoEvolucao } from '../componentes/graficos';
 import { BarraAlocacao, GraficoAportes } from '../componentes/minigraficos';
 import { Dica, Folha, GLOSSARIO } from '../componentes/ui';
-import { aportesPorMes, DESCRICAO_METODO, type Posicao } from '../domain/carteira';
+import { aportesPorMes, DESCRICAO_METODO, type Ativo, type Posicao } from '../domain/carteira';
 import { CLASSES_INVESTIMENTO, COR_CLASSE, NOME_CLASSE, type Classe, type Indexador, type TipoAtivo } from '../domain/tipos';
 import {
   carregarCarteira,
@@ -82,6 +82,9 @@ function FormExtrato({ p, aoSalvar }: { p: Posicao; aoSalvar: () => void }) {
 
 const NOVO = '__novo__';
 
+/** Banco ou corretora de um ativo próprio; Tesouro e ETFs do catálogo não precisam. */
+const mostrarOnde = (a: Ativo) => Boolean(a.emissor) && a.tipo !== 'tesouro' && a.tipo !== 'etf';
+
 function FormMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: () => void }) {
   const [ativoId, setAtivoId] = useState('');
   const [tipo, setTipo] = useState<'compra' | 'venda'>('compra');
@@ -89,7 +92,7 @@ function FormMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: () => v
   const [quantidade, setQuantidade] = useState('1');
   const [preco, setPreco] = useState('');
   const [taxa, setTaxa] = useState('');
-  const [novo, setNovo] = useState({ nome: '', classe: 'renda_fixa' as Classe, tipo: 'cdb' as TipoAtivo, indexador: 'cdi' as Indexador, vencimento: '', isento: false, liquidez: false });
+  const [novo, setNovo] = useState({ nome: '', instituicao: '', classe: 'renda_fixa' as Classe, tipo: 'cdb' as TipoAtivo, indexador: 'cdi' as Indexador, vencimento: '', isento: false, liquidez: false });
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const ativo = d.ativos.find((a) => a.id === ativoId);
@@ -111,7 +114,8 @@ function FormMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: () => v
       if (ativoId === NOVO) {
         id = await criarAtivoProprio({
           codigo: novo.nome.trim().toUpperCase().slice(0, 60), nome: novo.nome.trim(), classe: novo.classe, tipo: novo.tipo,
-          indexador: novo.indexador, vencimento: novo.vencimento || null, isento_ir: novo.isento, liquidez_diaria: novo.liquidez, emissor: null,
+          indexador: novo.indexador, vencimento: novo.vencimento || null, isento_ir: novo.isento, liquidez_diaria: novo.liquidez,
+          emissor: novo.instituicao.trim().slice(0, 120) || null,
         });
       }
       await registrarMovimentacao({ ativo_id: id, tipo, data, quantidade: q, preco_unitario: p, taxa_contratada: pedeTaxa && taxa.trim() ? numeroBR(taxa) : null });
@@ -127,7 +131,7 @@ function FormMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: () => v
   return (
     <form className="pilha" onSubmit={salvar}>
       <AvisoErro>{erro}</AvisoErro>
-      <div className="seletor" role="radiogroup" aria-label="Tipo" style={{ width: 'fit-content' }}>
+      <div className="seletor" role="radiogroup" aria-label="Compra ou venda" style={{ width: 'fit-content' }}>
         {(['compra', 'venda'] as const).map((t) => (
           <button key={t} type="button" role="radio" aria-checked={tipo === t} onClick={() => setTipo(t)}>
             {tipo === t && <span className="seletor-fundo" />}
@@ -137,33 +141,49 @@ function FormMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: () => v
       </div>
       <Selecao rotulo="Investimento" value={ativoId} onChange={(e) => setAtivoId(e.target.value)}>
         <option value="">Escolha…</option>
-        {tipo === 'compra' && <option value={NOVO}>+ Cadastrar CDB, LCI/LCA ou outro</option>}
+        {tipo === 'compra' && <option value={NOVO}>+ Cadastrar fundo, CDB, LCI/LCA ou outro</option>}
         {(['reserva', 'renda_fixa', 'acoes_br', 'exterior'] as Classe[]).map((c) => (
           <optgroup key={c} label={NOME_CLASSE[c]}>
-            {catalogo.filter((a) => a.classe === c).map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+            {catalogo.filter((a) => a.classe === c).map((a) => <option key={a.id} value={a.id}>{a.nome}{mostrarOnde(a) ? ` · ${a.emissor}` : ''}</option>)}
           </optgroup>
         ))}
       </Selecao>
 
       {ativoId === NOVO && (
         <div className="pilha" style={{ borderTop: '1px solid var(--linha)', paddingTop: 16 }}>
-          <Campo rotulo="Nome" value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} placeholder="CDB Banco X 2028" maxLength={120} />
-          <Selecao rotulo="Para que serve" value={novo.classe} onChange={(e) => setNovo({ ...novo, classe: e.target.value as Classe })}>
-            <option value="reserva">Reserva de emergência</option>
-            <option value="renda_fixa">Renda fixa longa</option>
-          </Selecao>
-          <Selecao rotulo="Tipo" value={novo.tipo} onChange={(e) => { const t = e.target.value as TipoAtivo; setNovo({ ...novo, tipo: t, isento: t === 'lci_lca' }); }}>
+          <Selecao rotulo="Tipo" value={novo.tipo} onChange={(e) => {
+            const t = e.target.value as TipoAtivo;
+            // Fundo não tem taxa fixa nem vencimento: o valor vem do extrato do banco.
+            setNovo({ ...novo, tipo: t, isento: t === 'lci_lca', ...(t === 'fundo' ? { indexador: 'nenhum' as Indexador, vencimento: '' } : {}) });
+          }}>
             <option value="cdb">CDB</option>
             <option value="lci_lca">LCI / LCA (sem IR)</option>
+            <option value="fundo">Fundo de investimento</option>
             <option value="outro">Outro</option>
           </Selecao>
-          <Selecao rotulo="Como rende" value={novo.indexador} onChange={(e) => setNovo({ ...novo, indexador: e.target.value as Indexador })}>
-            <option value="cdi">% do CDI</option>
-            <option value="pre">Prefixado</option>
-            <option value="ipca">IPCA + taxa</option>
-            <option value="nenhum">Não sei (atualizo pelo extrato)</option>
+          <Campo rotulo="Nome" value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })}
+            placeholder={novo.tipo === 'fundo' ? 'Como aparece no app do banco' : 'CDB Banco X 2028'} maxLength={120} />
+          <Campo rotulo="Onde está (banco ou corretora)" value={novo.instituicao} onChange={(e) => setNovo({ ...novo, instituicao: e.target.value })} placeholder="Itaú, Nubank, XP…" maxLength={120} />
+          <Selecao rotulo="Para que serve" value={novo.classe} onChange={(e) => setNovo({ ...novo, classe: e.target.value as Classe })}
+            ajuda={novo.tipo === 'fundo' ? 'Na dúvida, veja a lâmina do fundo no app do banco: renda fixa, ações ou exterior.' : undefined}>
+            <option value="reserva">Reserva de emergência</option>
+            <option value="renda_fixa">Renda fixa longa</option>
+            <option value="acoes_br">Ações Brasil</option>
+            <option value="exterior">Exterior</option>
           </Selecao>
-          <Campo rotulo="Vencimento" type="date" value={novo.vencimento} onChange={(e) => setNovo({ ...novo, vencimento: e.target.value })} />
+          {novo.tipo === 'fundo' ? (
+            <p className="corpo-pequeno suave" style={{ margin: 0 }}>Fundos não têm taxa fixa: o app usa o valor aplicado e, quando você quiser, o saldo do extrato (botão "Extrato" na lista).</p>
+          ) : (
+            <>
+              <Selecao rotulo="Como rende" value={novo.indexador} onChange={(e) => setNovo({ ...novo, indexador: e.target.value as Indexador })}>
+                <option value="cdi">% do CDI</option>
+                <option value="pre">Prefixado</option>
+                <option value="ipca">IPCA + taxa</option>
+                <option value="nenhum">Não sei (atualizo pelo extrato)</option>
+              </Selecao>
+              <Campo rotulo="Vencimento" type="date" value={novo.vencimento} onChange={(e) => setNovo({ ...novo, vencimento: e.target.value })} />
+            </>
+          )}
           <label className="corpo-pequeno" style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 40 }}>
             <input type="checkbox" checked={novo.liquidez} onChange={(e) => setNovo({ ...novo, liquidez: e.target.checked })} style={{ width: 18, height: 18, accentColor: 'var(--verde)' }} />
             Posso resgatar a qualquer dia
@@ -332,7 +352,7 @@ export default function Carteira() {
                     <td>
                       <div className="ativo-celula">
                         <b><span className="marca-classe" style={{ background: COR_CLASSE[p.ativo.classe] }} />{p.ativo.nome}</b>
-                        <small>{NOME_CLASSE[p.ativo.classe]}{p.ativo.tipo === 'etf' && ` · ${p.quantidade.toLocaleString('pt-BR')} ${p.quantidade === 1 ? 'cota' : 'cotas'}`}</small>
+                        <small>{NOME_CLASSE[p.ativo.classe]}{mostrarOnde(p.ativo) && ` · ${p.ativo.emissor}`}{p.ativo.tipo === 'etf' && ` · ${p.quantidade.toLocaleString('pt-BR')} ${p.quantidade === 1 ? 'cota' : 'cotas'}`}</small>
                       </div>
                     </td>
                     <td className="num" data-movel="oculto">{formatarMoeda(p.aplicado)}</td>
