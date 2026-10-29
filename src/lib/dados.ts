@@ -520,6 +520,15 @@ export async function criarAtivoProprio(a: {
 }): Promise<string> {
   const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error('Sessão expirada.');
+  // Mesmo nome de antes (nova compra do mesmo fundo, ou um cadastro que parou
+  // no meio): reaproveita o investimento e atualiza os dados dele.
+  const existente = exigir<{ id: string } | null>(
+    await supabase.from('ativo').select('id').eq('usuario_id', data.user.id).eq('codigo', a.codigo).maybeSingle(),
+  );
+  if (existente) {
+    exigir(await supabase.from('ativo').update(a).eq('id', existente.id).select('id'));
+    return existente.id;
+  }
   return exigir<{ id: string }>(await supabase.from('ativo').insert({ ...a, usuario_id: data.user.id }).select('id').single()).id;
 }
 

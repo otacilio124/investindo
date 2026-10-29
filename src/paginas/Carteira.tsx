@@ -97,7 +97,8 @@ function FormMovimentacao({ d, aoSalvar }: { d: DadosCarteira; aoSalvar: () => v
   const [salvando, setSalvando] = useState(false);
   const ativo = d.ativos.find((a) => a.id === ativoId);
   const indexador = ativoId === NOVO ? novo.indexador : ativo?.indexador;
-  const pedeTaxa = ativoId === NOVO || (ativo && ativo.tipo !== 'etf' && ativo.indexador !== 'nenhum');
+  // Fundos e "não sei" não têm taxa contratada: o valor vem do extrato.
+  const pedeTaxa = ativoId === NOVO ? novo.indexador !== 'nenhum' : Boolean(ativo && ativo.tipo !== 'etf' && ativo.indexador !== 'nenhum');
   const unitario = ativoId === NOVO || (ativo && !['etf', 'tesouro'].includes(ativo.tipo));
 
   async function salvar(e: FormEvent) {
